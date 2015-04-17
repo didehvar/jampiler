@@ -14,7 +14,7 @@ namespace Jampiler
         {
             var lexer = new Lexer();
 
-            lexer.AddDefinition(new TokenDefinition("operator", new Regex(@"^\+|-|\*|\/|<|>|>=|<=|==|!=|and|or$", RegexOptions.IgnoreCase)));
+            lexer.AddDefinition(new TokenDefinition("operator", new Regex(@"^\+|-|\*|\/|<|>|>=|<=|==|!=|and|or", RegexOptions.IgnoreCase)));
 
             var tokens = lexer.Tokenize(Console.ReadLine());
 
