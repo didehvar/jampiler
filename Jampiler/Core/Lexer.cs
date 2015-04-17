@@ -32,7 +32,7 @@ namespace Jampiler.Core
                 {
                     var match = rule.Regex.Match(source, currentIndex);
 
-                    if (!match.Success /*|| (match.Index - currentIndex) != 0*/)
+                    if (!match.Success)
                         continue;
 
                     matchedDefinition = rule;
