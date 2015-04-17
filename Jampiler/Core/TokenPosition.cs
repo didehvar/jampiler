@@ -8,6 +8,13 @@ namespace Jampiler.Core
 {
     public class TokenPosition
     {
+        public TokenPosition(int currentIndex, int currentLine, int currentColumn)
+        {
+            Column = currentIndex;
+            Index = currentLine;
+            Line = currentColumn;
+        }
+
         public int Column { get; set; }
 
         public int Index { get; set; }
