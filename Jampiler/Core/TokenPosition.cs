@@ -20,5 +20,12 @@ namespace Jampiler.Core
         public int Index { get; set; }
 
         public int Line { get; set; }
+
+        public override string ToString()
+        {
+            return
+                string.Format("Position: {{@Column: '{0}'@Index: '{1}'@Line: '{2}' }}", Column, Index, Line)
+                    .Replace("@", System.Environment.NewLine + "\t");
+        }
     }
 }
