@@ -8,6 +8,13 @@ namespace Jampiler.Core
 {
     public class Token
     {
+        public Token(string type, string value, TokenPosition tokenPosition)
+        {
+            Type = type;
+            Value = value;
+            Position = tokenPosition;
+        }
+
         public TokenPosition Position { get; set; }
 
         public string Type { get; set; }
