@@ -42,8 +42,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\Compiler.cs" />
-    <Compile Include="Core\ILexer.cs" />
+    <Compile Include="Core\Lexer.cs" />
     <Compile Include="Core\Token.cs" />
+    <Compile Include="Core\TokenDefinition.cs" />
+    <Compile Include="Core\TokenPosition.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
