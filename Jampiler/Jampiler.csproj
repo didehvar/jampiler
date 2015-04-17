@@ -42,16 +42,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\Lexer.cs" />
-    <Compile Include="Core\Parser.cs" />
     <Compile Include="Core\TokenRegex.cs" />
-    <Compile Include="Grammar\String.cs" />
-    <Compile Include="Symbol\Symbol.cs" />
     <Compile Include="Core\Token.cs" />
     <Compile Include="Core\TokenDefinition.cs" />
     <Compile Include="Core\TokenPosition.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Symbol\TerminalSymbol.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
