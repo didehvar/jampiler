@@ -10,6 +10,7 @@ namespace Jampiler
     {
         static void Main(string[] args)
         {
+            Compiler compiler = new Compiler();
         }
     }
 }
