@@ -14,6 +14,4 @@ namespace Jampiler.Core
 
         public int Line { get; set; }
     }
-    }
-    }
 }
