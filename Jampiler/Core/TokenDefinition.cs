@@ -12,5 +12,7 @@ namespace Jampiler.Core
         public Regex Regex { get; set; }
 
         public string Type { get; set; }
+
+        public bool Ignore { get; set; }
     }
 }
