@@ -21,6 +21,4 @@ namespace Jampiler.Core
 
         public string Value { get; set; }
     }
-    }
-    }
 }
