@@ -1,6 +1,7 @@
 ﻿using Jampiler.Core;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,19 +13,20 @@ namespace Jampiler
     {
         static void Main(string[] args)
         {
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
+
             var lexer = new Lexer();
 
-            lexer.AddDefinition(new TokenDefinition("operator", new Regex(@"^\+|-|\*|\/|<|>|>=|<=|==|!=|and|or", RegexOptions.IgnoreCase)));
+            foreach (var pair in TokenRegex.Instance.Regexes)
+            {
+                lexer.AddDefinition(new TokenDefinition(pair.Key, pair.Value));
+            }
 
-            var tokens = lexer.Tokenize(Console.ReadLine());
+            var tokens = lexer.Tokenize("1 * 1");
 
             foreach (var token in tokens)
             {
-                Console.WriteLine(token.Value);
-                Console.WriteLine(token.Type);
-                Console.WriteLine(token.Position.Index);
-                Console.WriteLine(token.Position.Column);
-                Console.WriteLine(token.Position.Line);
+                Console.WriteLine(token);
             }
 
             Console.ReadLine();
