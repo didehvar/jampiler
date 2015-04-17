@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace Jampiler.Core
 {
-    public class Token
+    public class TokenPosition
     {
-        public TokenPosition Position { get; set; }
+        public int Column { get; set; }
 
-        public string Type { get; set; }
+        public int Index { get; set; }
 
-        public string Value { get; set; }
+        public int Line { get; set; }
     }
     }
     }
