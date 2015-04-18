@@ -2,9 +2,11 @@
 using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jampiler.AST;
 
 namespace Jampiler.Core
 {
@@ -22,7 +24,7 @@ namespace Jampiler.Core
 
             NextToken();
 
-            Expression();
+            Console.WriteLine(Expression().ToString());
         }
 
         private void NextToken()
@@ -60,12 +62,20 @@ namespace Jampiler.Core
             return true;
         }
 
-        private void Expression()
+        private Node Expression()
         {
+            var exprLeft = _currentToken;
             if (Accept(TokenType.Digit))
             {
+                var oper =_currentToken.Value;
                 Expect(TokenType.Operator);
+
+                var exprRight = _currentToken;
                 Expect(TokenType.Digit);
+
+                return new Node(
+                    NodeType.Expression, oper, new Node(NodeType.Number, exprLeft.Value),
+                    new Node(NodeType.Number, exprRight.Value));
             }
             else
             {
