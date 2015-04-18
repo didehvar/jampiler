@@ -15,6 +15,7 @@ namespace Jampiler.Core
         Nil,
         False,
         True,
+        Identifier,
         EndOfFile
     };
 
