@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -22,20 +23,21 @@ namespace Jampiler
                 lexer.AddDefinition(new TokenDefinition(pair.Key, pair.Value));
             }
 
-            var lexTokens = lexer.Tokenize(Console.ReadLine());
-            var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
-
-            foreach (var token in tokens)
+            do
             {
-                Console.WriteLine(token);
-            }
+                var lexTokens = lexer.Tokenize(Console.ReadLine());
+                var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
 
-            Console.WriteLine();
-            Console.WriteLine();
+                foreach (var token in tokens)
+                {
+                    Console.WriteLine(token);
+                }
 
-            var parser = new Parser(tokens);
+                Console.WriteLine();
+                Console.WriteLine();
 
-            Console.ReadLine();
+                var parser = new Parser(tokens);
+            } while (true);
         }
     }
 }
