@@ -18,7 +18,12 @@ namespace Jampiler.Core
             Regexes.Add(TokenType.String, new Regex(@"""[^""]+"""));
             Regexes.Add(TokenType.Number, new Regex(@"[0-9]+"));
             Regexes.Add(TokenType.Operator, new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or|AND|OR"));
+
+            // Characters
             Regexes.Add(TokenType.Equals, new Regex(@"="));
+            Regexes.Add(TokenType.OpenBracket, new Regex(@"\("));
+            Regexes.Add(TokenType.CloseBracket, new Regex(@"\)"));
+            Regexes.Add(TokenType.CloseBracket, new Regex(@","));
 
             // Keywords
             Regexes.Add(TokenType.Nil, new Regex(@"nil|NIL"));

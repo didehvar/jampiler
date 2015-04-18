@@ -18,6 +18,9 @@ namespace Jampiler.Core
         Identifier,
         Local,
         Equals,
+        OpenBracket,
+        CloseBracket,
+        Comma,
         EndOfFile
     };
 
