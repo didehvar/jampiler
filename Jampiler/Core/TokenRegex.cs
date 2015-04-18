@@ -23,7 +23,7 @@ namespace Jampiler.Core
             Regexes.Add(TokenType.Equals, new Regex(@"="));
             Regexes.Add(TokenType.OpenBracket, new Regex(@"\("));
             Regexes.Add(TokenType.CloseBracket, new Regex(@"\)"));
-            Regexes.Add(TokenType.CloseBracket, new Regex(@","));
+            Regexes.Add(TokenType.Comma, new Regex(@","));
 
             // Keywords
             Regexes.Add(TokenType.Nil, new Regex(@"nil|NIL"));
