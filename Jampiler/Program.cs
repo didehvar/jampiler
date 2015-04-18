@@ -22,12 +22,18 @@ namespace Jampiler
                 lexer.AddDefinition(new TokenDefinition(pair.Key, pair.Value));
             }
 
-            var tokens = lexer.Tokenize("1 * 1");
+            var lexTokens = lexer.Tokenize("1 * 1");
+            var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
 
             foreach (var token in tokens)
             {
                 Console.WriteLine(token);
             }
+
+            Console.WriteLine();
+            Console.WriteLine();
+
+            var parser = new Parser(tokens);
 
             Console.ReadLine();
         }
