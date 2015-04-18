@@ -10,7 +10,11 @@ namespace Jampiler.Core
     {
         Operator,
         Whitespace,
-        Digit,
+        Number,
+        String,
+        Nil,
+        False,
+        True,
         EndOfFile
     };
 

@@ -15,8 +15,12 @@ namespace Jampiler.Core
         private TokenRegex()
         {
             Regexes.Add(TokenType.Whitespace, new Regex(@"\s+"));
-            Regexes.Add(TokenType.Digit, new Regex(@"[0-9]"));
-            Regexes.Add(TokenType.Operator, new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or", RegexOptions.IgnoreCase));
+            Regexes.Add(TokenType.String, new Regex(@"""[^""]+"""));
+            Regexes.Add(TokenType.Number, new Regex(@"[0-9]+"));
+            Regexes.Add(TokenType.Operator, new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or|AND|OR"));
+            Regexes.Add(TokenType.Nil, new Regex(@"nil|NIL"));
+            Regexes.Add(TokenType.False, new Regex(@"false|FALSE"));
+            Regexes.Add(TokenType.True, new Regex(@"true|TRUE"));
         }
 
         public static TokenRegex Instance => _instance ?? (_instance = new TokenRegex());

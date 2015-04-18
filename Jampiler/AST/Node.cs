@@ -8,15 +8,9 @@ using Jampiler.Core;
 
 namespace Jampiler.AST
 {
-    public enum NodeType
-    {
-        Expression,
-        Number
-    }
-
     public class Node
     {
-        public NodeType Type { get; set; }
+        public TokenType Type { get; set; }
 
         public string Value { get; set; }
 
@@ -24,13 +18,13 @@ namespace Jampiler.AST
 
         public Node Right { get; set; } = null;
 
-        public Node(NodeType type, string value)
+        public Node(TokenType type, string value)
         {
             Type = type;
             Value = value;
         }
 
-        public Node(NodeType type, string value, Node left, Node right) : this(type, value)
+        public Node(TokenType type, string value, Node left, Node right) : this(type, value)
         {
             Left = left;
             Right = right;

@@ -12,7 +12,8 @@ namespace Jampiler.Core
 {
     public class Parser
     {
-        private Token _currentToken;
+        private Token _currentToken = null;
+        private Token _lastToken = null;
         private int _currentIndex;
 
         private readonly IEnumerable<Token> _tokens;
@@ -37,6 +38,12 @@ namespace Jampiler.Core
 
             do
             {
+                // Only update the last token if we aren't throwing away the next token
+                if (_currentToken != null && _currentToken.Type != TokenType.Whitespace)
+                {
+                    _lastToken = _currentToken;
+                }
+
                 _currentToken = _tokens.ElementAt(++_currentIndex);
             } while (_currentToken.Type == TokenType.Whitespace); // Skip whitespace tokens
         }
@@ -64,18 +71,20 @@ namespace Jampiler.Core
 
         private Node Expression()
         {
-            var exprLeft = _currentToken;
-            if (Accept(TokenType.Digit))
+            // expression = 'nil' | 'false' | 'true' | number | string, [ operator, expression ];
+
+            var left = _currentToken;
+            if (left.Type == TokenType.Nil || left.Type == TokenType.False || left.Type == TokenType.True ||
+                left.Type == TokenType.Number || left.Type == TokenType.String)
             {
-                var oper =_currentToken.Value;
-                Expect(TokenType.Operator);
+                // Consume the token for the first part of the expression
+                NextToken();
 
-                var exprRight = _currentToken;
-                Expect(TokenType.Digit);
-
-                return new Node(
-                    NodeType.Expression, oper, new Node(NodeType.Number, exprLeft.Value),
-                    new Node(NodeType.Number, exprRight.Value));
+                // If the next token is an operator, then there is also an expression()
+                // Last token would be the operator as accept consumes a token
+                return Accept(TokenType.Operator)
+                    ? new Node(_lastToken.Type, _lastToken.Value, new Node(left.Type, left.Value), Expression())
+                    : new Node(left.Type, left.Value);
             }
             else
             {
