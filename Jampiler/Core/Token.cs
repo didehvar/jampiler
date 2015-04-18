@@ -21,6 +21,7 @@ namespace Jampiler.Core
         OpenBracket,
         CloseBracket,
         Comma,
+        Return,
         EndOfFile
     };
 
