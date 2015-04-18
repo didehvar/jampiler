@@ -9,7 +9,7 @@ namespace Jampiler.Core
 {
     public class TokenDefinition
     {
-        public TokenDefinition(string type, Regex regex, bool ignore = false)
+        public TokenDefinition(TokenTypes type, Regex regex, bool ignore = false)
         {
             Type = type;
             Regex = regex;
@@ -18,7 +18,7 @@ namespace Jampiler.Core
 
         public Regex Regex { get; set; }
 
-        public string Type { get; set; }
+        public TokenTypes Type { get; set; }
 
         public bool Ignore { get; set; }
     }

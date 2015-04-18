@@ -6,9 +6,17 @@ using System.Threading.Tasks;
 
 namespace Jampiler.Core
 {
+    public enum TokenTypes
+    {
+        Operator,
+        Whitespace,
+        Digit,
+        EndOfFile
+    };
+
     public class Token
     {
-        public Token(string type, string value, TokenPosition tokenPosition)
+        public Token(TokenTypes type, string value, TokenPosition tokenPosition)
         {
             Type = type;
             Value = value;
@@ -17,15 +25,15 @@ namespace Jampiler.Core
 
         public TokenPosition Position { get; set; }
 
-        public string Type { get; set; }
+        public TokenTypes Type { get; set; }
 
         public string Value { get; set; }
 
         public override string ToString()
         {
             return
-                string.Format("Token: {{@Type: '{0}'@Value: '{1}'@{2} }}", Type, Value, Position.ToString().Replace("\t", "\t\t"))
-                    .Replace("@", System.Environment.NewLine + "\t");
+                string.Format((string) "Token: {{@Type: '{0}'@Value: '{1}'@{2} }}", Type, Value, Position.ToString().Replace("\t", "\t\t"))
+                    .Replace("@", Environment.NewLine + "\t");
         }
     }
 }

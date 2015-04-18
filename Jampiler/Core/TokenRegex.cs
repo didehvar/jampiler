@@ -14,18 +14,18 @@ namespace Jampiler.Core
 
         private TokenRegex()
         {
-            Regexes.Add("whitespace", new Regex(@"\s+"));
-            Regexes.Add("digit", new Regex(@"[0-9]"));
-            Regexes.Add("operator", new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or", RegexOptions.IgnoreCase));
+            Regexes.Add(TokenTypes.Whitespace, new Regex(@"\s+"));
+            Regexes.Add(TokenTypes.Digit, new Regex(@"[0-9]"));
+            Regexes.Add(TokenTypes.Operator, new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or", RegexOptions.IgnoreCase));
         }
 
         public static TokenRegex Instance => _instance ?? (_instance = new TokenRegex());
 
-        public Dictionary<string, Regex> Regexes = new Dictionary<string, Regex>();
+        public Dictionary<TokenTypes, Regex> Regexes = new Dictionary<TokenTypes, Regex>();
 
-        public Regex GetRegex(string name)
+        public Regex GetRegex(TokenTypes type)
         {
-            return Regexes[name];
+            return Regexes[type];
         }
     }
 }
