@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -40,11 +41,18 @@ namespace Jampiler.AST
 
         public override string ToString()
         {
-            return
-                string.Format(
-                    "Node: {{@Type: '{0}'@Value: '{1}'@Left: {2} @Right: {3}}}", Type, Value,
-                    Left?.ToString().Replace("\t", "\t\t") ?? "null", Right?.ToString().Replace("\t", "\t\t") ?? "null")
-                    .Replace("@", Environment.NewLine + "\t");
+            return string.Format("{{ {0} }} {{ {1} }}", Type, Value);
+        }
+
+        public void Print(string indent = "", string prefix = "N")
+        {
+            Console.WriteLine(string.Format("{0}{1} {2}", indent, prefix, ToString()));
+
+            indent += "  ";
+            var copy = indent.Clone().ToString();
+
+            Left?.Print(indent, "L");
+            Right?.Print(copy, "R");
         }
     }
 }
