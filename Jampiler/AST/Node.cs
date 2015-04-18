@@ -32,6 +32,12 @@ namespace Jampiler.AST
 
         public Node(Token token) : this(token.Type, token.Value) { }
 
+        public Node(Token token, Node left, Node right) : this(token)
+        {
+            Left = left;
+            Right = right;
+        }
+
         public override string ToString()
         {
             return
