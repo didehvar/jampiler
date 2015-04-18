@@ -17,16 +17,16 @@ namespace Jampiler.Core
         private Token _lastToken = null;
         private int _currentIndex;
 
-        private readonly IEnumerable<Token> _tokens;
+        private IEnumerable<Token> _tokens;
 
-        public Parser(IEnumerable<Token> tokens)
+        public Node Parse(IEnumerable<Token> tokens)
         {
             _tokens = tokens;
             _currentIndex = -1;
 
             NextToken();
 
-            Statement().Print();
+            return Statement();
         }
 
         private void NextToken()

@@ -28,15 +28,22 @@ namespace Jampiler
                 var lexTokens = lexer.Tokenize(Console.ReadLine());
                 var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
 
+                Console.WriteLine();
+                Console.WriteLine("----- TOKENS -----");
                 foreach (var token in tokens)
                 {
                     Console.WriteLine(token);
                 }
+                Console.WriteLine("--- END TOKENS ---");
 
                 Console.WriteLine();
-                Console.WriteLine();
 
-                var parser = new Parser(tokens);
+                var parser = new Parser();
+                var nodes = parser.Parse(tokens);
+
+                Console.WriteLine("----- NODES -----");
+                nodes.Print();
+                Console.WriteLine("--- END NODES ---");
             } while (true);
         }
     }
