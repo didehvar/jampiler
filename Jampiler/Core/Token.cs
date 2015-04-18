@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Jampiler.Core
 {
-    public enum TokenTypes
+    public enum TokenType
     {
         Operator,
         Whitespace,
@@ -16,7 +16,7 @@ namespace Jampiler.Core
 
     public class Token
     {
-        public Token(TokenTypes type, string value, TokenPosition tokenPosition)
+        public Token(TokenType type, string value, TokenPosition tokenPosition)
         {
             Type = type;
             Value = value;
@@ -25,7 +25,7 @@ namespace Jampiler.Core
 
         public TokenPosition Position { get; set; }
 
-        public TokenTypes Type { get; set; }
+        public TokenType Type { get; set; }
 
         public string Value { get; set; }
 

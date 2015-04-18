@@ -69,7 +69,7 @@ namespace Jampiler.Core
                 }
             }
 
-            yield return new Token(TokenTypes.EndOfFile, null, new TokenPosition(currentIndex, currentLine, currentColumn));
+            yield return new Token(TokenType.EndOfFile, null, new TokenPosition(currentIndex, currentLine, currentColumn));
         }
     }
 }

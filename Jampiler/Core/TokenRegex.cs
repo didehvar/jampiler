@@ -14,16 +14,16 @@ namespace Jampiler.Core
 
         private TokenRegex()
         {
-            Regexes.Add(TokenTypes.Whitespace, new Regex(@"\s+"));
-            Regexes.Add(TokenTypes.Digit, new Regex(@"[0-9]"));
-            Regexes.Add(TokenTypes.Operator, new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or", RegexOptions.IgnoreCase));
+            Regexes.Add(TokenType.Whitespace, new Regex(@"\s+"));
+            Regexes.Add(TokenType.Digit, new Regex(@"[0-9]"));
+            Regexes.Add(TokenType.Operator, new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or", RegexOptions.IgnoreCase));
         }
 
         public static TokenRegex Instance => _instance ?? (_instance = new TokenRegex());
 
-        public Dictionary<TokenTypes, Regex> Regexes = new Dictionary<TokenTypes, Regex>();
+        public Dictionary<TokenType, Regex> Regexes = new Dictionary<TokenType, Regex>();
 
-        public Regex GetRegex(TokenTypes type)
+        public Regex GetRegex(TokenType type)
         {
             return Regexes[type];
         }
