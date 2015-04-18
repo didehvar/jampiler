@@ -32,7 +32,8 @@ namespace Jampiler.Core
         public override string ToString()
         {
             return
-                string.Format((string) "Token: {{@Type: '{0}'@Value: '{1}'@{2} }}", Type, Value, Position.ToString().Replace("\t", "\t\t"))
+                string.Format(
+                    "Token: {{@Type: '{0}'@Value: '{1}'@{2} }}", Type, Value, Position.ToString().Replace("\t", "\t\t"))
                     .Replace("@", Environment.NewLine + "\t");
         }
     }
