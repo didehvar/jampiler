@@ -206,8 +206,18 @@ namespace Jampiler.Core
             var identifier = _lastToken;
 
             var args = ArgumentList();
+            var block = Block();
 
-            return new Node(func, new Node(identifier), Block() ?? args); // block
+            if (block == null)
+            {
+                block = args;
+            }
+            else
+            {
+                block.Left = args;
+            }
+
+            return new Node(func, new Node(identifier), block); // block
         }
 
         private Node ReturnStatement()
