@@ -156,34 +156,20 @@ namespace Jampiler.Core
                 throw new Exception("Unexpected token");
             }
 
-            Node node = null;
+            var node = new Node(TokenType.Block, "");
+            var nextNode = node;
 
             // Parse statements until the end is reached
             while (_currentToken.Type != TokenType.End)
             {
                 switch (_currentToken.Type) {
                     case TokenType.Return:
-                        if (node == null)
-                        {
-                            node = ReturnStatement();
-                        }
-                        else
-                        {
-                            node.Right = ReturnStatement();
-                        }
-
+                        nextNode.Right = ReturnStatement();
                         continue; // Exit loop, nothing after return statement
                     case TokenType.Local:
                     case TokenType.Identifier:
-                        if (node == null)
-                        {
-                            node = Statement();
-                        }
-                        else
-                        {
-                            node.Right = Statement();
-                        }
-
+                        nextNode.Right = Statement();
+                        nextNode = nextNode.Right;
                         break;
                     default:
                         throw new Exception("Unexpected token");

@@ -20,6 +20,7 @@ namespace Jampiler.Core
         Return,
         End,
         Function,
+        Block,
         EndOfFile
     };
 
