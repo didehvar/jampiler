@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Globalization;
-using System.Linq;
 using Jampiler.Core;
+using System.IO;
+using System.Linq;
 
 namespace Jampiler
 {
     class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
 
@@ -18,28 +19,30 @@ namespace Jampiler
                 lexer.AddDefinition(new TokenDefinition(pair.Key, pair.Value));
             }
 
-            do
+            var program = File.ReadAllText(@"../../test.jam");
+            Console.WriteLine(program);
+
+            var lexTokens = lexer.Tokenize(program);
+            var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
+
+            Console.WriteLine();
+            Console.WriteLine("----- TOKENS -----");
+            foreach (var token in tokens)
             {
-                var lexTokens = lexer.Tokenize(Console.ReadLine());
-                var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
+                Console.WriteLine(token);
+            }
+            Console.WriteLine("--- END TOKENS ---");
 
-                Console.WriteLine();
-                Console.WriteLine("----- TOKENS -----");
-                foreach (var token in tokens)
-                {
-                    Console.WriteLine(token);
-                }
-                Console.WriteLine("--- END TOKENS ---");
+            Console.WriteLine();
 
-                Console.WriteLine();
+            var parser = new Parser();
+            var nodes = parser.Parse(tokens);
 
-                var parser = new Parser();
-                var nodes = parser.Parse(tokens);
+            Console.WriteLine("----- NODES -----");
+            nodes.Print();
+            Console.WriteLine("--- END NODES ---");
 
-                Console.WriteLine("----- NODES -----");
-                nodes.Print();
-                Console.WriteLine("--- END NODES ---");
-            } while (true);
+            Console.ReadLine();
         }
     }
 }
