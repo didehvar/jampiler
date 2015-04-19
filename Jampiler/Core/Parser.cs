@@ -26,7 +26,7 @@ namespace Jampiler.Core
 
             NextToken();
 
-            return Statement();
+            return Function();
         }
 
         private void NextToken()
@@ -144,6 +144,86 @@ namespace Jampiler.Core
             }
 
             throw new Exception("Unexpected token");
+        }
+
+        private Node Block()
+        {
+            // block = { statement }, [ return statement ], 'end';
+            // statement = 'local’, identifier, [ '=', (string | number | identifier)]
+            //           | identifier, '=', expression
+            //           | identifier, arg list;
+
+            // If this isn't a statement/return/end then the token is unexpected
+            if (_currentToken.Type != TokenType.Local && _currentToken.Type != TokenType.Identifier &&
+                _currentToken.Type != TokenType.Return && _currentToken.Type != TokenType.End)
+            {
+                throw new Exception("Unexpected token");
+            }
+
+            Node node = null;
+
+            // Parse statements until the end is reached
+            while (_currentToken.Type != TokenType.End)
+            {
+                switch (_currentToken.Type) {
+                    case TokenType.Return:
+                        if (node == null)
+                        {
+                            node = ReturnStatement();
+                        }
+                        else
+                        {
+                            node.Right = ReturnStatement();
+                        }
+
+                        continue; // Exit loop, nothing after return statement
+                    case TokenType.Local:
+                    case TokenType.Identifier:
+                        if (node == null)
+                        {
+                            node = Statement();
+                        }
+                        else
+                        {
+                            node.Right = Statement();
+                        }
+
+                        break;
+                    default:
+                        throw new Exception("Unexpected token");
+                }
+            }
+
+            Expect(TokenType.End);
+
+            return node;
+        }
+
+        private Node Function()
+        {
+            // function = ‘function’, identifier, function body;
+            Expect(TokenType.Function);
+            Expect(TokenType.Identifier);
+
+            return FunctionBody();
+        }
+
+        private Node FunctionBody()
+        {
+            // function body = arg list, block;
+            var args = ArgumentList();
+            var block = Block();
+
+            block.Left = args;
+            return block;
+        }
+
+        private Node ReturnStatement()
+        {
+            // return statement = ‘return’, { args };
+
+            Expect(TokenType.Return);
+            return new Node(_lastToken, Statement(), Arguments());
         }
 
         private Node ArgumentList()

@@ -31,7 +31,8 @@ namespace Jampiler.Core
             Regexes.Add(TokenType.True, new Regex(@"true|TRUE"));
             Regexes.Add(TokenType.Local, new Regex(@"local"));
             Regexes.Add(TokenType.Return, new Regex(@"return"));
-            Regexes.Add(TokenType.Return, new Regex(@"end"));
+            Regexes.Add(TokenType.End, new Regex(@"end"));
+            Regexes.Add(TokenType.Function, new Regex(@"function"));
 
             Regexes.Add(TokenType.Identifier, new Regex(@"[a-zA-Z_]\w*")); // Must come after keywords
         }
