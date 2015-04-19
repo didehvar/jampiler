@@ -1,12 +1,7 @@
-﻿using Jampiler.Core;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using Jampiler.Core;
 
 namespace Jampiler
 {

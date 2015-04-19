@@ -1,20 +1,14 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Xsl;
 using Jampiler.AST;
 
 namespace Jampiler.Core
 {
     public class Parser
     {
-        private Token _currentToken = null;
-        private Token _lastToken = null;
+        private Token _currentToken;
+        private Token _lastToken;
         private int _currentIndex;
 
         private IEnumerable<Token> _tokens;
@@ -60,24 +54,26 @@ namespace Jampiler.Core
             return true;
         }
 
-        private bool Expect(TokenType type)
+        private void Expect(TokenType type)
         {
             if (!Accept(type))
             {
                 throw new Exception("Unexpected token");
             }
-
-            return true;
         }
 
-        private bool Expect(List<TokenType> types)
+        private void Expect(List<TokenType> types)
         {
+            if (types == null)
+            {
+                throw new ArgumentNullException(nameof(types));
+            }
+
             if (types.All(t => t != _currentToken.Type)) {
                 throw new Exception("Unexpected token");
             }
 
             NextToken();
-            return true;
         }
 
         private Node Expression()
@@ -227,7 +223,6 @@ namespace Jampiler.Core
             // arg list = ‘(‘, [ args ], ‘)’;
 
             Expect(TokenType.OpenBracket);
-            var openBracket = _lastToken;
 
             if (_currentToken.Type != TokenType.Identifier) // Empty argument list ()
             {
@@ -254,7 +249,6 @@ namespace Jampiler.Core
             // args = argument, { ‘,’, argument };
 
             var node = Argument();
-            var comma = _currentToken;
 
             while (Accept(TokenType.Comma))
             {
@@ -295,7 +289,7 @@ namespace Jampiler.Core
                 }
                 else
                 {
-                    Node prevNode = null;
+                    Node prevNode;
                     var nextNode = node;
 
                     do

@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Jampiler.Core
 {
@@ -25,7 +21,7 @@ namespace Jampiler.Core
         {
             return
                 string.Format("Position: {{@Column: '{0}'@Index: '{1}'@Line: '{2}' }}", Column, Index, Line)
-                    .Replace("@", System.Environment.NewLine + "\t");
+                    .Replace("@", Environment.NewLine + "\t");
         }
     }
 }
