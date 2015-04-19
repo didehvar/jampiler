@@ -201,29 +201,25 @@ namespace Jampiler.Core
 
         private Node Function()
         {
-            // function = ‘function’, identifier, function body;
+            // function = ‘function’, identifier, arg list, block;
+
             Expect(TokenType.Function);
+            var func = _lastToken;
+
             Expect(TokenType.Identifier);
+            var identifier = _lastToken;
 
-            return FunctionBody();
-        }
-
-        private Node FunctionBody()
-        {
-            // function body = arg list, block;
             var args = ArgumentList();
-            var block = Block();
 
-            block.Left = args;
-            return block;
+            return new Node(func, new Node(identifier), Block() ?? args); // block
         }
 
         private Node ReturnStatement()
         {
-            // return statement = ‘return’, { args };
+            // return statement = ‘return’ expression;
 
             Expect(TokenType.Return);
-            return new Node(_lastToken, Statement(), Arguments());
+            return new Node(_lastToken, Expression(), null);
         }
 
         private Node ArgumentList()
@@ -245,18 +241,24 @@ namespace Jampiler.Core
             return args;
         }
 
+        private Node Argument()
+        {
+            // argument = identifier | string | number;
+
+            Expect(new List<TokenType>() { TokenType.Identifier, TokenType.String, TokenType.Number });
+            return new Node(_lastToken);
+        }
+
         private Node Arguments()
         {
-            // args = identifier, { ‘,’, identifier };
+            // args = argument, { ‘,’, argument };
 
-            Expect(TokenType.Identifier);
-
-            var node = new Node(_lastToken); // The first identifier is stored in a node
+            var node = Argument();
             var comma = _currentToken;
 
             while (Accept(TokenType.Comma))
             {
-                Expect(TokenType.Identifier);
+                var newNode = Argument();
 
                 // Need to complete the tree properly, where 1 is the first identifier and so on
                 //
@@ -284,12 +286,12 @@ namespace Jampiler.Core
 
                 if (node.Left == null)
                 {
-                    var topNode = new Node(_lastToken) { Left = node };
-                    node = topNode;
+                    newNode.Left = node;
+                    node = newNode;
                 }
                 else if (node.Right == null)
                 {
-                    node.Right = new Node(_lastToken);
+                    node.Right = newNode;
                 }
                 else
                 {
@@ -304,12 +306,12 @@ namespace Jampiler.Core
 
                     if (nextNode.Left == null)
                     {
-                        var topNode = new Node(_lastToken) { Left = nextNode };
-                        prevNode.Right = topNode;
+                        newNode.Left = nextNode;
+                        prevNode.Right = newNode;
                     }
                     else
                     {
-                        nextNode.Right = new Node(_lastToken);
+                        nextNode.Right = newNode;
                     }
                 }
             }
