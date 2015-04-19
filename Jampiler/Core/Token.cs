@@ -23,6 +23,7 @@ namespace Jampiler.Core
         Comma,
         Return,
         End,
+        Function,
         EndOfFile
     };
 
