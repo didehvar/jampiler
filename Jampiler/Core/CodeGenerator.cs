@@ -1,66 +1,40 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using Jampiler.AST;
+using Jampiler.Code;
 
 namespace Jampiler.Core
 {
-    public struct CodeGeneratorBlock
+    public enum Instruction
     {
-        public string Before;
-        public string Body;
-        public string After;
-
-        public int LcNumber;
-        public int LNumber;
-
-        public CodeGeneratorBlock(int lc, int l, string funcName)
-        {
-            LcNumber = lc;
-            LNumber = l;
-
-            Before = string.Format(".LC{0}:\n", lc);
-            Body = string.Format("{0}:\n", funcName);
-            After = string.Format(".L{0}:\n", l);
-        }
+        Mov,
+        Ldr,
+        Str
     }
 
     public class CodeGenerator
     {
-        public string Output { get; set; }
-
-        private int _lCNumber;
-        private int _lNumber;
-
-        private enum Instruction
-        {
-            Mov
-        }
+        public List<Function> Functions = new List<Function>();
 
         public void Generate(Node tree)
         {
-            Output = "";
-            _lCNumber = 0;
-            _lNumber = 2;
-
             // First node is top of tree, work out what token each node is
             if (tree.Type == TokenType.Function)
             {
                 Console.WriteLine("Function");
 
-                // Left node is identifier, right node is block
+                // Left node is identifier, right node is func
                 Expect(tree.Left, TokenType.Identifier);
                 Expect(tree.Right, TokenType.Block);
 
-                var block = new CodeGeneratorBlock(_lCNumber, _lNumber, tree.Left.Value);
-
-                // If block is empty, then this function is super useless
+                // If func is empty, then this function is super useless
                 if (tree.Right.Right == null)
                 {
                     return;
                 }
+
+                var func = new Function(tree.Left.Value);
 
                 // Iterate through statements
                 var statement = tree.Right.Right;
@@ -68,8 +42,8 @@ namespace Jampiler.Core
                 {
                     if (statement.Type == TokenType.Return)
                     {
-                        // Last statement in this block, all others are ignored
-                        Return(statement, ref block);
+                        // Last statement in this func, all others are ignored
+                        Return(statement, ref func);
                         break;
                     }
 
@@ -77,16 +51,23 @@ namespace Jampiler.Core
                     statement = statement.Right;
                 } while (statement != null);
 
-                Console.WriteLine("Add block to output");
-                AddBlockToOutput(block);
+                Console.WriteLine("Add func to output");
+                Functions.Add(func);
             }
         }
 
-        private void AddBlockToOutput(CodeGeneratorBlock block)
+        public string Output()
         {
-            Output += block.Before;
-            Output += block.Body;
-            Output += block.After;
+            var data = ".data\n\n";
+            var text = ".text\n\n";
+
+            foreach (var f in Functions)
+            {
+                data += f.Data();
+                text += f.Text();
+            }
+
+            return string.Format("{0}\n{1}", data, text);
         }
 
         private void Expect(Node node, TokenType type)
@@ -105,18 +86,17 @@ namespace Jampiler.Core
             }
         }
 
-        private void AddAssembly(ref CodeGeneratorBlock block, Instruction instruction, string assembly)
+        private void AddAssembly(ref Function func, Instruction instruction, string assembly)
         {
-            block.Body += string.Format("\t{0}\t{1}\n", instruction.ToString().ToLower(), assembly);
+            func.AddLine(instruction, assembly);
         }
 
-        private void AddAssemblyString(ref CodeGeneratorBlock block, string str)
+        private string AddAssemblyString(ref Function func, string str)
         {
-            block.Before += string.Format("\t.asciz\t{0}\n", str);
-            block.After += string.Format("\t.word\t.LC{0}", block.LcNumber);
+            return func.AddData(new Data("asciz", str));
         }
 
-        private void Return(Node node, ref CodeGeneratorBlock block)
+        private void Return(Node node, ref Function func)
         {
             Console.WriteLine("Return");
 
@@ -126,11 +106,10 @@ namespace Jampiler.Core
                 return;
             }
 
-            Expression(node.Left, ref block);
-            AddAssembly(ref block, Instruction.Mov, "r0, r3");
+            Expression(node.Left, ref func);
         }
 
-        private void Expression(Node node, ref CodeGeneratorBlock block)
+        private void Expression(Node node, ref Function func)
         {
             Console.WriteLine("Expression");
             Console.WriteLine("{0} | {1}", node.Type, node.Value);
@@ -141,12 +120,13 @@ namespace Jampiler.Core
                 switch (node.Type)
                 {
                     case TokenType.Number:
-                        AddAssembly(ref block, Instruction.Mov, string.Format("r3, #{0}", node.Value));
+                        AddAssembly(ref func, Instruction.Mov, string.Format("r3, #{0}", node.Value));
                         break;
 
                     case TokenType.String:
-                        AddAssemblyString(ref block, node.Value);
-                        AddAssembly(ref block, Instruction.Mov, string.Format("r3, #{0}", node.Value));
+                        var strName = AddAssemblyString(ref func, node.Value);
+                        AddAssembly(ref func, Instruction.Ldr, string.Format("r0, {0}", strName));
+                        AddAssembly(ref func, Instruction.Str, string.Format("lr, [r0]", strName));
                         break;
                 }
 
@@ -155,7 +135,7 @@ namespace Jampiler.Core
 
             // Left is required part of expression
             // Right is another expression
-            Expression(node.Right, ref block);
+            Expression(node.Right, ref func);
         }
     }
 }

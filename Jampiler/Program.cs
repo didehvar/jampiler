@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using Jampiler.Core;
 using System.IO;
 using System.Linq;
+using Jampiler.Code;
 
 namespace Jampiler
 {
@@ -47,8 +49,7 @@ namespace Jampiler
 
             var codeGenerator = new CodeGenerator();
             codeGenerator.Generate(node);
-
-            Console.WriteLine(codeGenerator.Output);
+            Console.WriteLine(codeGenerator.Output());
 
             Console.WriteLine("--- END OUTPUT ---");
 
