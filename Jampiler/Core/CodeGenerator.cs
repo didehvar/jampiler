@@ -13,12 +13,12 @@ namespace Jampiler.Core
         public string Body;
         public string After;
 
-        public int LCNumber;
+        public int LcNumber;
         public int LNumber;
 
         public CodeGeneratorBlock(int lc, int l, string funcName)
         {
-            LCNumber = lc;
+            LcNumber = lc;
             LNumber = l;
 
             Before = string.Format(".LC{0}:\n", lc);
@@ -113,7 +113,7 @@ namespace Jampiler.Core
         private void AddAssemblyString(ref CodeGeneratorBlock block, string str)
         {
             block.Before += string.Format("\t.asciz\t{0}\n", str);
-            block.After += string.Format("\t.word\t.LC{0}", block.LCNumber);
+            block.After += string.Format("\t.word\t.LC{0}", block.LcNumber);
         }
 
         private void Return(Node node, ref CodeGeneratorBlock block)
