@@ -36,11 +36,21 @@ namespace Jampiler
             Console.WriteLine();
 
             var parser = new Parser();
-            var nodes = parser.Parse(tokens);
+            var node = parser.Parse(tokens);
 
             Console.WriteLine("----- NODES -----");
-            nodes.Print();
+            node.Print();
             Console.WriteLine("--- END NODES ---");
+
+            Console.WriteLine();
+            Console.WriteLine("----- OUTPUT -----");
+
+            var codeGenerator = new CodeGenerator();
+            codeGenerator.Generate(node);
+
+            Console.WriteLine(codeGenerator.Output);
+
+            Console.WriteLine("--- END OUTPUT ---");
 
             Console.ReadLine();
         }
