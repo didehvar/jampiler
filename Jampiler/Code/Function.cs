@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using Jampiler.Core;
@@ -9,8 +10,8 @@ namespace Jampiler.Code
     {
         public string Name { get; set; }
 
-        private List<string> _lines = new List<string>();
-        private List<Data> _data = new List<Data>();
+        private readonly List<string> _lines = new List<string>();
+        private readonly List<Data> _data = new List<Data>();
 
         private int count = 0;
 
@@ -38,15 +39,21 @@ namespace Jampiler.Code
             _lines.Add(line + "\n");
         }
 
-        public string AddData(Data data)
+        public Data AddData(Data data)
         {
             if (data.Name == "")
             {
                 data.Name = Name + count++;
             }
 
+            var find = _data.Find(d => d.Name == data.Name);
+            if (find != null)
+            {
+                return find;
+            }
+
             _data.Add(data);
-            return string.Format("addr_{0}", data.Name);
+            return data;
         }
 
         public string Text()
