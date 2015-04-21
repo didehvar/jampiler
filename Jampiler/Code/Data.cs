@@ -9,7 +9,7 @@
 
         private Data() { }
 
-        public Data(string type, string value, string register, string name = "")
+        public Data(string type, string value, string name = "")
         {
             Type = type;
             Value = value;
