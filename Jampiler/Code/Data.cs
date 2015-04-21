@@ -13,7 +13,6 @@
         {
             Type = type;
             Value = value;
-            Register = register;
             Name = name;
         }
     }
