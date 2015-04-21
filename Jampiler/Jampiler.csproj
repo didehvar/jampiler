@@ -44,6 +44,7 @@
     <Compile Include="AST\Node.cs" />
     <Compile Include="Code\Data.cs" />
     <Compile Include="Code\Function.cs" />
+    <Compile Include="Code\Return.cs" />
     <Compile Include="Core\CodeGenerator.cs" />
     <Compile Include="Core\Lexer.cs" />
     <Compile Include="Core\Parser.cs" />

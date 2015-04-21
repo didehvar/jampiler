@@ -4,23 +4,44 @@ namespace Jampiler.Code
 {
     public class Return
     {
+        public Function Parent { get; set; }
+
         public Data Data { get; set; }
 
-        public string Value { get; set; }
+        private Return() { }
+
+        public Return(Function parent)
+        {
+            Parent = parent;
+        }
 
         public string Text()
         {
-            if (Data != null)
+            if (Data == null)
             {
-                return string.Format("\tldr {0}, addr_{1}\n" + "\tldr, lr [{0}]", Data.Name, Data.Register);
+                throw new NotImplementedException("TODO: exit functions");
             }
 
-            if (!string.IsNullOrEmpty(Value))
+            // If the data has a type, we must use its address
+            if (!string.IsNullOrEmpty(Data.Type))
             {
-                return string.Format("\tmov r0, {0}", Value); ;
+                Parent.Registers.Add(Data);
+
+                var count = Parent.Registers.Count - 1;
+                var s = string.Format("\tldr r{0}, addr_{1}\n" + "\tldr lr, [r{0}]\n", count, Data.Name);
+
+                Parent.Registers.RemoveAt(count);
+
+                return s;
             }
 
-            throw new Exception("Cannot convert empty return");
+            // Data without a type is just a number
+            if (!string.IsNullOrEmpty(Data.Value))
+            {
+                return string.Format("\tmov r0, {0}\n", Data.Value);
+            }
+
+            throw new NotImplementedException("Data not supported");
         }
     }
 }

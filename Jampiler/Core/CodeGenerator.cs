@@ -1,76 +1,72 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.AccessControl;
 using Jampiler.AST;
 using Jampiler.Code;
 
 namespace Jampiler.Core
 {
-    public enum Instruction
-    {
-        Mov,
-        Ldr,
-        Str
-    }
-
     public class CodeGenerator
     {
-        public List<Function> Functions = new List<Function>();
+        public List<Data> Data { get; set; }
+
+        public List<Function> Functions { get; set; }
+
+        public CodeGenerator()
+        {
+            Data = new List<Data>();
+            Functions = new List<Function>();
+        }
 
         public void Generate(Node tree)
         {
             // First node is top of tree, work out what token each node is
             if (tree.Type == TokenType.Function)
             {
-                Console.WriteLine("Function");
+                Functions.Add(ParseFunction(tree));
+            }
+        }
 
-                // Left node is identifier, right node is func
-                Expect(tree.Left, TokenType.Identifier);
-                Expect(tree.Right, TokenType.Block);
+        public Function ParseFunction(Node funcNode)
+        {
+            // Left node is identifier, right node is funcNode
+            Expect(funcNode.Left, TokenType.Identifier);
+            Expect(funcNode.Right, TokenType.Block);
 
-                // If func is empty, then this function is super useless
-                if (tree.Right.Right == null)
+            var func = new Function(funcNode, funcNode.Left.Value);
+
+            if (funcNode.Right.Right == null)
+            {
+                return func;
+            }
+
+            var statement = funcNode.Right.Right;
+            do
+            {
+                if (statement.Type == TokenType.Return)
                 {
-                    return;
+                    func.AddReturn(ParseReturn(func, statement));
                 }
 
-                var func = new Function(tree.Left.Value);
+                //Statement(statement);
+                statement = statement.Right;
+            } while (statement != null);
 
-                // Iterate through statements
-                var statement = tree.Right.Right;
-                do
-                {
-                    if (statement.Type == TokenType.Return)
-                    {
-                        // Last statement in this func, all others are ignored
-                        Return(statement, ref func);
-                        break;
-                    }
-
-                    //Statement(statement);
-                    statement = statement.Right;
-                } while (statement != null);
-
-                Console.WriteLine("Add func to output");
-                Functions.Add(func);
-            }
+            return func;
         }
 
         public string Output()
         {
-            var data = ".data\n\n";
-            var text = ".text\n\n";
+            var data = Data.Aggregate(".data\n\n", (current, d) => current + d.Text());
+            var text = Functions.Aggregate(".text\n\n", (current, f) => current + f.Text());
+            var addr = Data.Where(a => a.Name != null)
+                .Aggregate("", (current, a) => string.Format("{0}\naddr_{1}: .word {1}", current, a.Name));
 
-            foreach (var f in Functions)
-            {
-                data += f.Data();
-                text += f.Text();
-            }
-
-            return string.Format("{0}\n{1}", data, text);
+            return string.Format("{0}\n{1}\n{2}", data, text, addr);
         }
 
-        private void Expect(Node node, TokenType type)
+        private static void Expect(Node node, TokenType type)
         {
             if (node == null || node.Type != type)
             {
@@ -78,7 +74,7 @@ namespace Jampiler.Core
             }
         }
 
-        private void Expect(Node node, List<TokenType> types)
+        private static void Expect(Node node, List<TokenType> types)
         {
             if (node == null || types.All(t => node.Type != t))
             {
@@ -86,56 +82,64 @@ namespace Jampiler.Core
             }
         }
 
-        private void AddAssembly(ref Function func, Instruction instruction, string assembly)
+        private Return ParseReturn(Function parent, Node node)
         {
-            func.AddLine(instruction, assembly);
-        }
+            // return statement = ‘return’ expression;
 
-        private string AddAssemblyString(ref Function func, string str)
-        {
-            return func.AddData(new Data("asciz", str));
-        }
+            var ret = new Return(parent);
 
-        private void Return(Node node, ref Function func)
-        {
-            Console.WriteLine("Return");
-
-            // Return may have just been used to exit function early
-            if (node.Left == null)
+            if (node.Left == null) // Return may have just been used to exit function early
             {
-                return;
+                return ret;
             }
 
-            Expression(node.Left, ref func);
-        }
-
-        private void Expression(Node node, ref Function func)
-        {
-            Console.WriteLine("Expression");
-            Console.WriteLine("{0} | {1}", node.Type, node.Value);
-
-            if (node.Type != TokenType.Operator)
+            ret.Data = ParseExpression(node.Left);
+            if (ret.Data.Name == null)
             {
-                // Just left hand of expression
-                switch (node.Type)
-                {
-                    case TokenType.Number:
-                        AddAssembly(ref func, Instruction.Mov, string.Format("r3, #{0}", node.Value));
-                        break;
-
-                    case TokenType.String:
-                        var strName = AddAssemblyString(ref func, node.Value);
-                        AddAssembly(ref func, Instruction.Ldr, string.Format("r0, {0}", strName));
-                        AddAssembly(ref func, Instruction.Str, string.Format("lr, [r0]", strName));
-                        break;
-                }
-
-                return;
+                ret.Data.Name = parent.DataName();
             }
 
-            // Left is required part of expression
-            // Right is another expression
-            Expression(node.Right, ref func);
+            return ret;
+        }
+
+        private Data ParseExpression(Node node)
+        {
+            // expression = 'nil' | 'false' | 'true' | number | string, [ operator, expression ];
+
+            if (node.Type == TokenType.Operator)
+            {
+                throw new NotImplementedException("Expression operators not supported");
+            }
+
+            return ParseExpressionData(node);
+        }
+
+        private Data ParseExpressionData(Node node)
+        {
+            // Just left hand of expression
+            switch (node.Type)
+            {
+                case TokenType.Number:
+                    // Mov no into r0 register
+                    return new Data() { Value = node.Value };
+
+                case TokenType.String:
+                    return AddData(new Data() { Type = "asciz", Value = node.Value });
+
+                default:
+                    throw new NotImplementedException("Data type not supported");
+            }
+        }
+
+        private Data AddData(Data data)
+        {
+            if (data.Type == null || data.Value == null)
+            {
+                throw new Exception("Cannot add data without a type");
+            }
+
+            Data.Add(data);
+            return data;
         }
     }
 }

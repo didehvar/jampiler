@@ -1,19 +1,29 @@
-﻿namespace Jampiler.Code
+﻿using System.Net.Mime;
+using System.Runtime.InteropServices;
+
+namespace Jampiler.Code
 {
     public class Data
     {
         public string Type;
         public string Value;
-        public string Register;
         public string Name;
 
-        private Data() { }
+        public Data() { }
 
-        public Data(string type, string value, string name = "")
+        public string Text()
         {
-            Type = type;
-            Value = value;
-            Name = name;
+            if (Type == null || Value == null || Name == null)
+            {
+                return "";
+            }
+
+            return string.Format("{0}: {1}\t{2}", Name, Type, Value);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0}: {1}\t{2}", Name, Type, Value);
         }
     }
 }
