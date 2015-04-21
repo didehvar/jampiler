@@ -15,6 +15,8 @@ namespace Jampiler.Code
 
         private int count = 0;
 
+        private int register = 1;
+
         private Function() { }
 
         public Function(string name)
@@ -52,7 +54,9 @@ namespace Jampiler.Code
                 return find;
             }
 
+            data.Register = string.Format("r{0}", register++.ToString());
             _data.Add(data);
+
             return data;
         }
 
