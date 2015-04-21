@@ -39,7 +39,7 @@ namespace Jampiler.Code
         public string Text()
         {
             return string.Format(
-                "{0}\tbx\tlr\n",
+                "{0}\tbx lr\n",
                 _lines.Aggregate(string.Format(".global\t{0}\n{0}:\n", Name), (current, line) => current + line));
         }
 
