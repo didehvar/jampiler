@@ -78,20 +78,18 @@ namespace Jampiler.Core
 
         private Node Expression()
         {
-            // expression = 'nil' | 'false' | 'true' | number | string, [ operator, expression ];
+            // expression = 'nil' | 'false' | 'true' | number | string | identifier, [ operator, expression ];
 
             var left = _currentToken;
             if (left.Type == TokenType.Nil || left.Type == TokenType.False || left.Type == TokenType.True ||
-                left.Type == TokenType.Number || left.Type == TokenType.String)
+                left.Type == TokenType.Number || left.Type == TokenType.String || left.Type == TokenType.Identifier)
             {
                 // Consume the token for the first part of the expression
                 NextToken();
 
                 // If the next token is an operator, then there is also an expression()
                 // Last token would be the operator as accept consumes a token
-                return Accept(TokenType.Operator)
-                    ? new Node(_lastToken, new Node(left), Expression())
-                    : new Node(left);
+                return Accept(TokenType.Operator) ? new Node(_lastToken, new Node(left), Expression()) : new Node(left);
             }
 
             throw new Exception("Unexpected token");
