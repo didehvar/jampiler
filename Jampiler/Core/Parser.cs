@@ -132,7 +132,7 @@ namespace Jampiler.Core
                 if (Accept(TokenType.Equals))
                 {
                     // expression
-                    return new Node(left, new Node(_lastToken, Expression(), null), null);
+                    return new Node(left, new Node(_lastToken, null, Expression()), null);
                 }
 
                 // arg list

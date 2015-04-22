@@ -15,6 +15,8 @@ namespace Jampiler.Code
 
         public string Name { get; set; }
 
+        public readonly List<Statement> Statements;
+
         /// <summary>
         /// Element position represents the register in use.
         /// </summary>
@@ -33,6 +35,7 @@ namespace Jampiler.Code
             StartNode = startNode;
             Name = name;
             _registers = new List<Data>();
+            Statements = new List<Statement>();
         }
 
         public void AddReturn(Return ret)
@@ -41,6 +44,18 @@ namespace Jampiler.Code
             {
                 _lines.Add(l);
             }
+        }
+
+        public void AddStatement(Statement statement)
+        {
+            // Assign the statement a register so that it can load its data
+            // In order to load a statement, check if it needs setup text in assembly (e.g. for assignment)
+            // Then add it to this functions statement list for later use
+
+            statement.Register = AddRegister(statement);
+            _lines.Add(statement.LoadText());
+
+            Statements.Add(statement);
         }
 
         public string Text()
@@ -52,7 +67,7 @@ namespace Jampiler.Code
             if (_regMax > 3)
             {
                 s += "\tpush {r4";
-                pop += "\tpop {r4";
+                pop += "\n\tpop {r4";
 
                 for (var i = 5; i < _regMax; i++)
                 {

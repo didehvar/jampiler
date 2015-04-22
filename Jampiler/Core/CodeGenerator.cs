@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Security.AccessControl;
 using Jampiler.AST;
@@ -48,8 +49,11 @@ namespace Jampiler.Core
                 {
                     func.AddReturn(ParseReturn(func, statement));
                 }
+                else
+                {
+                    func.AddStatement(ParseStatement(func, statement));
+                }
 
-                //Statement(statement);
                 statement = statement.Right;
             } while (statement != null);
 
@@ -82,6 +86,39 @@ namespace Jampiler.Core
             }
         }
 
+
+        private Statement ParseStatement(Function parent, Node node)
+        {
+            // statement = 'local’, identifier, [ '=', (string | number | identifier)]
+            //           | identifier, '=', expression
+            //           | identifier, arg list;
+
+            var statement = new Statement(parent);
+
+            // 'local’, identifier, [ '=', (string | number | identifier)]
+            if (node.Left.Type == TokenType.Equals && node.Left.Left != null)
+            {
+                statement.Name = node.Value;
+
+                switch (node.Left.Right.Type)
+                {
+                    case TokenType.Number:
+                        statement.Value = node.Left.Right.Value;
+                        break;
+
+                    case TokenType.String:
+                        statement.Type = DataType.Asciz;
+                        statement.Value = node.Left.Right.Value;
+                        break;
+
+                    default:
+                        throw new NotImplementedException("Unsupported type");
+                }
+            }
+
+            return statement;
+        }
+
         private Return ParseReturn(Function parent, Node node)
         {
             // return statement = ‘return’ expression;
@@ -111,7 +148,7 @@ namespace Jampiler.Core
             while (currentNode.Type == TokenType.Operator)
             {
                 data.Add(ParseExpressionData(parent, currentNode.Left));
-                data.Add(new Data() { Type = "OPERATOR", Value = currentNode.Value });
+                data.Add(new Data() { Type = DataType.Operator, Value = currentNode.Value });
 
                 currentNode = currentNode.Right;
             }
@@ -130,7 +167,17 @@ namespace Jampiler.Core
                     return new Data() { Value = node.Value };
 
                 case TokenType.String:
-                    return AddData(new Data() { Type = "asciz", Value = node.Value, Name = parent.DataName() });
+                    return AddData(new Data() { Type = DataType.Asciz, Value = node.Value, Name = parent.DataName() });
+
+                case TokenType.Identifier:
+                    // Identifier in an expression, must get identifier value
+                    var statement = parent.Statements.First(s => s.Name == node.Value);
+                    if (statement == null)
+                    {
+                        throw new Exception("Coudln't find referenced statement/variable");
+                    }
+
+                    return statement;
 
                 default:
                     throw new NotImplementedException("Data type not supported");
