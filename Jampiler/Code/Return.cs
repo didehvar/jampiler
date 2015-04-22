@@ -34,7 +34,7 @@ namespace Jampiler.Code
             }
 
             Parent.StartRegisterStore();
-            var startRegister = Parent.Registers.Count;
+            var startRegister = Parent.RegisterCount();
             var currentRegister = startRegister;
 
             Console.WriteLine();
@@ -59,6 +59,12 @@ namespace Jampiler.Code
                 AddLine(op.Value, startRegister, ++currentRegister);
             }
 
+            // If register 0 isn't used as the final data store for the operation, the data must be moved into r0
+            if (startRegister != 0)
+            {
+                _lines.Add(string.Format("\tmov r0, r{0}", startRegister));
+            }
+
             Parent.EndRegisterStore();
             return _lines;
         }
@@ -68,19 +74,15 @@ namespace Jampiler.Code
             // If the data has a type, we must use its address
             if (!string.IsNullOrEmpty(data.Type))
             {
-                Parent.Registers.Add(data);
-                var count = isReturn ? 0 : Parent.Registers.Count - 1;
-
-                return string.Format("\tldr r{0}, addr_{1}\n" + "\tldr r{0}, [r{0}]\n", count, data.Name);
+                return string.Format(
+                    "\tldr r{0}, addr_{1}\n" + "\tldr r{0}, [r{0}]\n", isReturn ? 0 : Parent.AddRegister(data),
+                    data.Name);
             }
 
             // Data without a type is just a number
             if (!string.IsNullOrEmpty(data.Value))
             {
-                Parent.Registers.Add(data);
-                var count = isReturn ? 0 : Parent.Registers.Count - 1;
-
-                return string.Format("\tmov r{0}, #{1}\n", count, data.Value);
+                return string.Format("\tmov r{0}, #{1}\n", isReturn ? 0 : Parent.AddRegister(data), data.Value);
             }
 
             throw new NotImplementedException("Data not supported");
