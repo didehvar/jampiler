@@ -31,16 +31,18 @@ namespace Jampiler.Core
                 throw new Exception("TODO");
             }
 
+            // Skip whitespace and comments
             do
             {
                 // Only update the last token if we aren't throwing away the next token
-                if (_currentToken != null && _currentToken.Type != TokenType.Whitespace)
+                if (_currentToken != null && _currentToken.Type != TokenType.Whitespace &&
+                    _currentToken.Type != TokenType.Comment)
                 {
                     _lastToken = _currentToken;
                 }
 
                 _currentToken = _tokens.ElementAt(++_currentIndex);
-            } while (_currentToken.Type == TokenType.Whitespace); // Skip whitespace tokens
+            } while (_currentToken.Type == TokenType.Whitespace || _currentToken.Type == TokenType.Comment);
         }
 
         private bool Accept(TokenType type)
@@ -122,7 +124,7 @@ namespace Jampiler.Core
                     TokenType.Identifier
                 });
 
-                return new Node(equals, new Node(identifier, new Node(left), null), new Node(_lastToken));
+                return new Node(identifier, new Node(equals, new Node(left), new Node(_lastToken)), null);
             }
             else if (Accept(TokenType.Identifier))
             {
@@ -130,11 +132,11 @@ namespace Jampiler.Core
                 if (Accept(TokenType.Equals))
                 {
                     // expression
-                    return new Node(_lastToken, new Node(left), Expression());
+                    return new Node(left, new Node(_lastToken, Expression(), null), null);
                 }
 
                 // arg list
-                return new Node(left) { Right = ArgumentList() };
+                return new Node(left, ArgumentList(), null);
             }
 
             throw new Exception("Unexpected token");
@@ -164,11 +166,13 @@ namespace Jampiler.Core
                     case TokenType.Return:
                         nextNode.Right = ReturnStatement();
                         continue; // Exit loop, nothing after return statement
+
                     case TokenType.Local:
                     case TokenType.Identifier:
                         nextNode.Right = Statement();
                         nextNode = nextNode.Right;
                         break;
+
                     default:
                         throw new Exception("Unexpected token");
                 }
