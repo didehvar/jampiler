@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using Jampiler.AST;
 using Jampiler.Core;
@@ -21,6 +22,7 @@ namespace Jampiler.Code
         private readonly List<string> _lines = new List<string>();
 
         private int _count = 0;
+        private int _regDeleteStart = 0;
 
         private Function() { }
 
@@ -33,7 +35,10 @@ namespace Jampiler.Code
 
         public void AddReturn(Return ret)
         {
-            _lines.Add(ret.Text());
+            foreach (var l in ret.Lines())
+            {
+                _lines.Add(l);
+            }
         }
 
         public string Text()
@@ -46,6 +51,16 @@ namespace Jampiler.Code
         public string DataName()
         {
             return string.Format("{0}{1}", Name, _count++.ToString());
+        }
+
+        public void StartRegisterStore()
+        {
+            _regDeleteStart = Registers.Count;
+        }
+
+        public void EndRegisterStore()
+        {
+            Registers.RemoveRange(_regDeleteStart, Registers.Count - _regDeleteStart);
         }
     }
 }

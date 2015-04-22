@@ -93,28 +93,34 @@ namespace Jampiler.Core
                 return ret;
             }
 
-            ret.Data = ParseExpression(node.Left);
-            if (ret.Data.Name == null)
-            {
-                ret.Data.Name = parent.DataName();
-            }
-
+            ret.Data = ParseExpression(parent, node.Left);
             return ret;
         }
 
-        private Data ParseExpression(Node node)
+        private List<Data> ParseExpression(Function parent, Node node)
         {
             // expression = 'nil' | 'false' | 'true' | number | string, [ operator, expression ];
 
-            if (node.Type == TokenType.Operator)
+            // As there can be an infinite amount of [ operator, expression ] we must traverse the tree
+            // If a node is an operator we must parse the element to the left (nil, false, etc) and then move onto the right
+            // The operator is stored in the data list so we can go back through it and calculate the value
+
+            var currentNode = node;
+            var data = new List<Data>();
+
+            while (currentNode.Type == TokenType.Operator)
             {
-                throw new NotImplementedException("Expression operators not supported");
+                data.Add(ParseExpressionData(parent, currentNode.Left));
+                data.Add(new Data() { Type = "OPERATOR", Value = currentNode.Value });
+
+                currentNode = currentNode.Right;
             }
 
-            return ParseExpressionData(node);
+            data.Add(ParseExpressionData(parent, currentNode));
+            return data;
         }
 
-        private Data ParseExpressionData(Node node)
+        private Data ParseExpressionData(Function parent, Node node)
         {
             // Just left hand of expression
             switch (node.Type)
@@ -124,7 +130,7 @@ namespace Jampiler.Core
                     return new Data() { Value = node.Value };
 
                 case TokenType.String:
-                    return AddData(new Data() { Type = "asciz", Value = node.Value });
+                    return AddData(new Data() { Type = "asciz", Value = node.Value, Name = parent.DataName() });
 
                 default:
                     throw new NotImplementedException("Data type not supported");
