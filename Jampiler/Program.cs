@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using Jampiler.Core;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Jampiler.Code;
 
 namespace Jampiler
@@ -13,9 +15,9 @@ namespace Jampiler
         private static void Main(string[] args)
         {
 #if !DEBUG
-            if (args.Length != 1)
+            if (args.Length != 2)
             {
-                Logger.Instance.Debug("Invalid arguments, correct usage: jampiler.exe {file}");
+                Logger.Instance.Debug("Invalid arguments, correct usage: jampiler.exe {file} {pi ip}");
                 return;
             }
 
@@ -67,6 +69,25 @@ namespace Jampiler
             file.Close();
 
             Logger.Instance.Debug("--- END OUTPUT ---");
+
+            // Run assembler and linker and copy to pi
+            var prcoess = new Process();
+            var processStartInfo = new ProcessStartInfo()
+            {
+                //WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = "cmd.exe",
+                WorkingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                Arguments =
+                    string.Format(
+                        @"/k C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-gcc.exe -march=armv6 -mfloat-abi=hard -mfpu=vfp -o jam.out jam.s & " +
+                        @"C:\Users\James\Documents\pscp.exe -pw raspberry jam.out pi@{0}:/home/pi ",
+                        args.ElementAtOrDefault(1) ?? "192.168.1.34"),
+                RedirectStandardInput = true,
+                UseShellExecute = false
+            };
+            Process.Start(processStartInfo);
+
+            
 
 #if DEBUG
             Console.ReadLine();
