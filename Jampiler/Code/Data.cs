@@ -10,7 +10,10 @@ namespace Jampiler.Code
         Asciz,
         Operator,
         Global,
-        Statement
+        Statement,
+        Nil,
+        Return,
+        Word
     }
 
     public class Data
@@ -31,7 +34,13 @@ namespace Jampiler.Code
                 return "";
             }
 
-            return string.Format("{0}: {1}\t{2}", Name, Type, Value);
+            var type = Type.ToString();
+            if (Type == DataType.Word)
+            {
+                type = ".word";
+            }
+
+            return string.Format("{0}: {1}\t{2}", Name, type, Value);
         }
 
         public override string ToString()

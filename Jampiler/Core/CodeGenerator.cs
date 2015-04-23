@@ -51,7 +51,7 @@ namespace Jampiler.Core
                 }
                 else
                 {
-                    func.AddStatement(ParseStatement(func, statement));
+                    func.AddData(ParseStatement(func, statement));
                 }
 
                 statement = statement.Right;
@@ -87,7 +87,7 @@ namespace Jampiler.Core
         }
 
 
-        private Statement ParseStatement(Function parent, Node node)
+        private Data ParseStatement(Function parent, Node node)
         {
             // statement = 'local’, identifier, [ '=', (string | number | identifier)]
             //           | identifier, '=', expression
@@ -123,6 +123,85 @@ namespace Jampiler.Core
                 Globals.Instance.List.Add(global);
 
                 global.Datas = ParseExpression(parent, node.Left.Right);
+                return global;
+            }
+            // identifier, arg list;
+            else
+            {
+                statement.Name = node.Value;
+
+                switch (node.Value)
+                {
+                    case "print":
+                        var data = new Data(DataType.Return)
+                        {
+                            Name = "return" + Data.Count,
+                            Type = DataType.Word,
+                            Value = "0"
+                        };
+                        Data.Add(data);
+
+                        var register = parent.AddRegister(data);
+
+                        // Store lr before puts replaces it
+                        parent.Lines.Add(string.Format("\n\tldr r{0}, addr_{1}\n", register, data.Name));
+                        parent.Lines.Add(string.Format("\tstr lr, [r{0}]\n\n", register));
+
+                        var nextNode = node.Left;
+                        while (nextNode != null)
+                        {
+                            Console.WriteLine("TYPE {0}", nextNode);
+
+                            switch (nextNode.Type)
+                            {
+                                case TokenType.Identifier:
+                                    Console.WriteLine("IDENTIFIER");
+                                    // Local variables will already be loaded
+                                    // Global variables are not loaded
+
+                                    var locData = GetDataWithName(parent, nextNode.Value);
+                                    var regNum = 0;
+
+                                    // If its a global variable load it into a register 
+                                    if (locData is Global)
+                                    {
+                                        Console.WriteLine("GLOBAL");
+                                        regNum = parent.RegisterCount();
+                                        parent.Lines.Add(parent.ParseData(locData));
+                                    }
+                                    // Otherwise simply store the register it uses
+                                    else
+                                    {
+                                        Console.WriteLine("LOCAL");
+                                        regNum = parent.Registers.FindIndex(r => r.Name == nextNode.Value);
+                                    }
+
+                                    // If the data isn't in register 0, then it needs to be moved in
+                                    if (regNum != 0)
+                                    {
+                                        parent.Lines.Add(string.Format("\n\tmov r0, r{0}\n", regNum));
+                                    }
+
+                                    break;
+
+                                default:
+                                    throw new NotImplementedException("Other types currently not supported");
+                            }
+
+                            parent.Lines.Add("\tbl puts\n\n");
+
+                            nextNode = nextNode.Right;
+                        }
+
+                        // Restore lr
+                        parent.Lines.Add(string.Format("\tldr r{0}, addr_{1}\n", register, data.Name));
+                        parent.Lines.Add(string.Format("\tldr lr, [r{0}]\n\n", register));
+
+                        break;
+
+                    default:
+                        throw new NotImplementedException("Undefined functions not supported");
+                }
             }
 
             return statement;
@@ -180,19 +259,10 @@ namespace Jampiler.Core
 
                 case TokenType.Identifier:
                     // Identifier in an expression, must get identifier value
-                    var statement = parent.Statements.FirstOrDefault(s => s.Name == node.Value);
-                    if (statement != null)
-                    {
-                        return statement;
-                    }
+                    return GetDataWithName(parent, node.Value);
 
-                    var global = Globals.Instance.List.FirstOrDefault(g => g.Name == node.Value);
-                    if (global != null)
-                    {
-                        return global;
-                    }
-
-                    throw new Exception("Identifier not found");
+                case TokenType.Nil:
+                    return null;
 
                 default:
                     throw new NotImplementedException("Data type not supported");
@@ -208,6 +278,23 @@ namespace Jampiler.Core
 
             Data.Add(data);
             return data;
+        }
+
+        private Data GetDataWithName(Function parent, string name)
+        {
+            var statement = parent.Statements.FirstOrDefault(s => s.Name == name);
+            if (statement != null)
+            {
+                return statement;
+            }
+
+            var global = Globals.Instance.List.FirstOrDefault(g => g.Name == name);
+            if (global != null)
+            {
+                return global;
+            }
+
+            throw new Exception("Identifier not found");
         }
     }
 }

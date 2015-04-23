@@ -20,9 +20,9 @@ namespace Jampiler.Code
         /// <summary>
         /// Element position represents the register in use.
         /// </summary>
-        private readonly List<Data> _registers;
+        public readonly List<Data> Registers;
 
-        private readonly List<string> _lines = new List<string>();
+        public readonly List<string> Lines = new List<string>();
 
         private int _count = 0;
         private int _regDeleteStart = 0;
@@ -34,7 +34,7 @@ namespace Jampiler.Code
         {
             StartNode = startNode;
             Name = name;
-            _registers = new List<Data>();
+            Registers = new List<Data>();
             Statements = new List<Statement>();
         }
 
@@ -43,21 +43,25 @@ namespace Jampiler.Code
             AssembleData(ret.Data);
         }
 
-        public void AddStatement(Statement statement)
+        public void AddData(Data data)
         {
             // Assign the statement a register so that it can load its data
             // In order to load a statement, check if it needs setup text in assembly (e.g. for assignment)
             // Then add it to this functions statement list for later use
 
-            if (string.IsNullOrEmpty(statement.Value))
+            if (string.IsNullOrEmpty(data.Value))
             {
                 return;
             }
 
-            statement.Register = AddRegister(statement);
-            _lines.Add(statement.LoadText());
+            if (data is Statement)
+            {
+                var s = (Statement) data;
+                s.Register = AddRegister(data);
+                Lines.Add(s.LoadText());
 
-            Statements.Add(statement);
+                Statements.Add(s);
+            }
         }
 
         public string Text()
@@ -83,7 +87,7 @@ namespace Jampiler.Code
                 pop += "}\n";
             }
 
-            s += string.Format("{0}\n", _lines.Aggregate("", (current, line) => current + line));
+            s += string.Format("{0}\n", Lines.Aggregate("", (current, line) => current + line));
             s += pop;
             s += "\tbx lr\n";
 
@@ -97,36 +101,36 @@ namespace Jampiler.Code
 
         public void StartRegisterStore()
         {
-            _regDeleteStart = _registers.Count;
+            _regDeleteStart = Registers.Count;
         }
 
         public void EndRegisterStore()
         {
             UpdateRegCount();
-            _registers.RemoveRange(_regDeleteStart, _registers.Count - _regDeleteStart);
+            Registers.RemoveRange(_regDeleteStart, Registers.Count - _regDeleteStart);
         }
 
         public int RegisterCount()
         {
-            return _registers.Count;
+            return Registers.Count;
         }
 
         public int AddRegister(Data register)
         {
-            Console.WriteLine("ADDREGISTER: {0} [[{1}]]", _registers.Count, register.ToString());
-            _registers.Add(register);
-            return _registers.Count - 1;
+            Console.WriteLine("ADDREGISTER: {0} [[{1}]]", Registers.Count, register.ToString());
+            Registers.Add(register);
+            return Registers.Count - 1;
         }
 
         public void DeleteRegister(int index)
         {
             UpdateRegCount();
-            _registers.RemoveAt(index);
+            Registers.RemoveAt(index);
         }
 
         private void UpdateRegCount()
         {
-            var regCount = _registers.Count - 1;
+            var regCount = Registers.Count - 1;
             if (regCount >= 4 && _regMax < regCount)
             {
                 _regMax = regCount;
@@ -151,12 +155,13 @@ namespace Jampiler.Code
             Console.WriteLine("DATA FOR ASSEMBLEDATA");
             foreach (var d in data)
             {
-                Console.WriteLine(d.ToString());
+                Console.WriteLine(d?.ToString());
             }
             Console.WriteLine();
 
             var first = data.ElementAt(0);
-            _lines.Add(ParseData(first));
+            var firstData = ParseData(first);
+            Lines.Add(firstData);
 
             if (data.Count > 1)
             {
@@ -168,16 +173,25 @@ namespace Jampiler.Code
 
                     // Left element is in register [start register]
                     // Right element is in register [start register + 1]
-                    _lines.Add(ParseData(right));
+                    Lines.Add(ParseData(right));
 
-                    AddLine(op.Value, startRegister, (++currentRegister).ToString());
+                    switch (op.Value)
+                    {
+                        case "+":
+                            Lines.Add(string.Format("\tadd r{0}, r{0}, r{1}\n", startRegister, ++currentRegister));
+                            break;
+
+                        case "*":
+                            Lines.Add(string.Format("\tmul r{0}, r{1}\n", startRegister, ++currentRegister));
+                            break;
+                    }
                 }
             }
 
             // If register 0 isn't used as the final data store for the operation, the data must be moved into r0
-            if (startRegister != 0 && storeRegisters)
+            if (startRegister != 0 && storeRegisters && firstData != null)
             {
-                _lines.Add(string.Format("\tmov r0, r{0}\n", startRegister));
+                Lines.Add(string.Format("\tmov r0, r{0}\n", startRegister));
             }
 
             if (storeRegisters)
@@ -202,8 +216,13 @@ namespace Jampiler.Code
             return statement.Register.ToString();
         }
 
-        private string ParseData(Data data, bool isReturn = false)
+        public string ParseData(Data data, bool isReturn = false)
         {
+            if (data == null)
+            {
+                return null;
+            }
+
             var statement = TryParseStatement(data);
             if (statement != null)
             {
@@ -230,16 +249,6 @@ namespace Jampiler.Code
 
                 default:
                     throw new NotImplementedException(string.Format("Data ({0}) not supported", data.Type));
-            }
-        }
-
-        private void AddLine(string oper, int firstRegister, string lastRegister)
-        {
-            switch (oper)
-            {
-                case "+":
-                    _lines.Add(string.Format("\tadd r{0}, r{0}, r{1}\n", firstRegister, lastRegister));
-                    break;
             }
         }
     }

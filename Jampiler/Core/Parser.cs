@@ -71,7 +71,10 @@ namespace Jampiler.Core
                 throw new ArgumentNullException(nameof(types));
             }
 
-            if (types.All(t => t != _currentToken.Type)) {
+            types.ForEach(t => Console.WriteLine(t));
+            Console.WriteLine(_currentToken.Type);
+
+            if (!types.Contains(_currentToken.Type)) {
                 throw new Exception("Unexpected token");
             }
 
@@ -215,13 +218,12 @@ namespace Jampiler.Core
 
             Expect(TokenType.OpenBracket);
 
-            if (_currentToken.Type != TokenType.Identifier) // Empty argument list ()
+            Node args = null;
+            if (_currentToken.Type != TokenType.CloseBracket)
             {
-                Expect(TokenType.CloseBracket);
-                return null; // No node
+                args = Arguments();
             }
 
-            var args = Arguments();
             Expect(TokenType.CloseBracket);
 
             return args;
@@ -240,65 +242,12 @@ namespace Jampiler.Core
             // args = argument, { ‘,’, argument };
 
             var node = Argument();
+            var nextNode = node;
 
             while (Accept(TokenType.Comma))
             {
-                var newNode = Argument();
-
-                // Need to complete the tree properly, where 1 is the first identifier and so on
-                //
-                // 1 =>
-                //              2
-                //          1
-                // >=
-                //              2
-                //          1       3               
-                // >=
-                //              2
-                //          1       4
-                //                3
-                // >=
-                //              2
-                //          1       4
-                //                3   5
-                // >=
-                //              2
-                //          1       4
-                //                3   5
-                //                   6
-                //
-                // And so on
-
-                if (node.Left == null)
-                {
-                    newNode.Left = node;
-                    node = newNode;
-                }
-                else if (node.Right == null)
-                {
-                    node.Right = newNode;
-                }
-                else
-                {
-                    Node prevNode;
-                    var nextNode = node;
-
-                    do
-                    {
-                        prevNode = nextNode;
-                        nextNode = nextNode.Right;
-                    } while (nextNode.Left != null && nextNode.Right != null);
-
-                    if (nextNode.Left == null)
-                    {
-                        newNode.Left = nextNode;
-                        prevNode.Right = newNode;
-                    }
-                    else
-                    {
-                        nextNode.Right = newNode;
-                    }
-                }
+                nextNode.Right = Argument();
+                nextNode = nextNode.Right;
             }
 
             return node;

@@ -80,14 +80,13 @@ namespace Jampiler
                 Arguments =
                     string.Format(
                         @"/k C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-gcc.exe -march=armv6 -mfloat-abi=hard -mfpu=vfp -o jam.out jam.s & " +
-                        @"C:\Users\James\Documents\pscp.exe -pw raspberry jam.out pi@{0}:/home/pi ",
+                        @"C:\Users\James\Documents\pscp.exe -pw raspberry jam.out pi@{0}:/home/pi & " +
+                        @"C:\Users\James\Documents\putty.exe -pw raspberry -m C:\Users\James\Documents\GitHub\Jampiler\chmod pi@192.168.1.34",
                         args.ElementAtOrDefault(1) ?? "192.168.1.34"),
                 RedirectStandardInput = true,
                 UseShellExecute = false
             };
             Process.Start(processStartInfo);
-
-            
 
 #if DEBUG
             Console.ReadLine();
