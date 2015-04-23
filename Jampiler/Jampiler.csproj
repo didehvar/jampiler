@@ -50,6 +50,7 @@
     <Compile Include="Code\Statement.cs" />
     <Compile Include="Core\CodeGenerator.cs" />
     <Compile Include="Core\Lexer.cs" />
+    <Compile Include="Core\Logger.cs" />
     <Compile Include="Core\Parser.cs" />
     <Compile Include="Core\TokenRegex.cs" />
     <Compile Include="Core\Token.cs" />

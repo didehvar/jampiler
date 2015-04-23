@@ -15,12 +15,12 @@ namespace Jampiler
 #if !DEBUG
             if (args.Length != 1)
             {
-                Console.WriteLine("Invalid arguments, correct usage: jampiler.exe {file}");
+                Logger.Instance.Debug("Invalid arguments, correct usage: jampiler.exe {file}");
                 return;
             }
-#endif
 
-            Console.WriteLine(args[0]);
+            Logger.Instance.Debug(args[0]);
+#endif
 
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
 
@@ -32,42 +32,45 @@ namespace Jampiler
             }
 
             var program = File.ReadAllText(@"../../test.jam");
-            Console.WriteLine(program);
+            Logger.Instance.Debug(program);
 
             var lexTokens = lexer.Tokenize(program);
             var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
 
-            Console.WriteLine();
-            Console.WriteLine("----- TOKENS -----");
+            Logger.Instance.Debug();
+            Logger.Instance.Debug("----- TOKENS -----");
             foreach (var token in tokens)
             {
-                Console.WriteLine(token);
+                Logger.Instance.Debug(token.ToString());
             }
-            Console.WriteLine("--- END TOKENS ---");
+            Logger.Instance.Debug("--- END TOKENS ---");
 
-            Console.WriteLine();
+            Logger.Instance.Debug();
 
             var parser = new Parser();
             var node = parser.Parse(tokens);
 
-            Console.WriteLine("----- NODES -----");
+            Logger.Instance.Debug("----- NODES -----");
             node.Print();
-            Console.WriteLine("--- END NODES ---");
+            Logger.Instance.Debug("--- END NODES ---");
 
-            Console.WriteLine();
-            Console.WriteLine("----- OUTPUT -----");
+            Logger.Instance.Debug();
+            Logger.Instance.Debug("----- OUTPUT -----");
 
             var codeGenerator = new CodeGenerator();
             codeGenerator.Generate(node);
             var codeGenOutput = codeGenerator.Output();
-            Console.WriteLine(codeGenOutput);
+            Logger.Instance.Debug(codeGenOutput);
 
             var file = new StreamWriter(@"jam.s");
             file.WriteLine(codeGenOutput);
             file.Close();
 
-            Console.WriteLine("--- END OUTPUT ---");
+            Logger.Instance.Debug("--- END OUTPUT ---");
 
+#if DEBUG
+            Console.ReadLine();
+#endif
         }
     }
 }
