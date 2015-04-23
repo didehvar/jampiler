@@ -99,21 +99,30 @@ namespace Jampiler.Core
             if (node.Left.Type == TokenType.Equals && node.Left.Left != null)
             {
                 statement.Name = node.Value;
+                statement.Value = node.Left.Right.Value;
 
                 switch (node.Left.Right.Type)
                 {
                     case TokenType.Number:
-                        statement.Value = node.Left.Right.Value;
+                        statement.Type = DataType.Number;
                         break;
 
                     case TokenType.String:
                         statement.Type = DataType.Asciz;
-                        statement.Value = node.Left.Right.Value;
                         break;
 
                     default:
                         throw new NotImplementedException("Unsupported type");
                 }
+            }
+            // identifier, '=', expression
+            else if (node.Left.Type == TokenType.Equals)
+            {
+                // Must add to the globals first as parse expression will try to find the data
+                var global = new Global { Name = node.Value };
+                Globals.Instance.List.Add(global);
+
+                global.Datas = ParseExpression(parent, node.Left.Right);
             }
 
             return statement;
@@ -148,7 +157,7 @@ namespace Jampiler.Core
             while (currentNode.Type == TokenType.Operator)
             {
                 data.Add(ParseExpressionData(parent, currentNode.Left));
-                data.Add(new Data() { Type = DataType.Operator, Value = currentNode.Value });
+                data.Add(new Data(DataType.Operator) { Value = currentNode.Value });
 
                 currentNode = currentNode.Right;
             }
@@ -164,20 +173,26 @@ namespace Jampiler.Core
             {
                 case TokenType.Number:
                     // Mov no into r0 register
-                    return new Data() { Value = node.Value };
+                    return new Data(DataType.Number) { Value = node.Value };
 
                 case TokenType.String:
-                    return AddData(new Data() { Type = DataType.Asciz, Value = node.Value, Name = parent.DataName() });
+                    return AddData(new Data(DataType.Asciz) { Value = node.Value, Name = parent.DataName() });
 
                 case TokenType.Identifier:
                     // Identifier in an expression, must get identifier value
-                    var statement = parent.Statements.First(s => s.Name == node.Value);
-                    if (statement == null)
+                    var statement = parent.Statements.FirstOrDefault(s => s.Name == node.Value);
+                    if (statement != null)
                     {
-                        throw new Exception("Coudln't find referenced statement/variable");
+                        return statement;
                     }
 
-                    return statement;
+                    var global = Globals.Instance.List.FirstOrDefault(g => g.Name == node.Value);
+                    if (global != null)
+                    {
+                        return global;
+                    }
+
+                    throw new Exception("Identifier not found");
 
                 default:
                     throw new NotImplementedException("Data type not supported");

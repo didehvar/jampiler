@@ -1,4 +1,5 @@
 function main()
-  local bob = 1
-  return bob + 2 + 3 + 4 + 5
+  local bob = 19
+  trevor = 91
+  return trevor + 1 + 2 + bob
 end

@@ -12,6 +12,16 @@ namespace Jampiler
     {
         private static void Main(string[] args)
         {
+#if !DEBUG
+            if (args.Length != 1)
+            {
+                Console.WriteLine("Invalid arguments, correct usage: jampiler.exe {file}");
+                return;
+            }
+#endif
+
+            Console.WriteLine(args[0]);
+
             CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CreateSpecificCulture("en-GB");
 
             var lexer = new Lexer();
@@ -49,11 +59,15 @@ namespace Jampiler
 
             var codeGenerator = new CodeGenerator();
             codeGenerator.Generate(node);
-            Console.WriteLine(codeGenerator.Output());
+            var codeGenOutput = codeGenerator.Output();
+            Console.WriteLine(codeGenOutput);
+
+            var file = new StreamWriter(@"jam.s");
+            file.WriteLine(codeGenOutput);
+            file.Close();
 
             Console.WriteLine("--- END OUTPUT ---");
 
-            Console.ReadLine();
         }
     }
 }

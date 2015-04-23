@@ -11,7 +11,7 @@ namespace Jampiler.Code
 
         public int? Register { get; set; }
 
-        public Statement(Function parent)
+        public Statement(Function parent) : base(DataType.Statement)
         {
             Parent = parent;
 
@@ -23,7 +23,7 @@ namespace Jampiler.Code
         {
             if (Register == null || Value == null)
             {
-                return "";
+                return null;
             }
 
             return string.Format(
@@ -33,7 +33,7 @@ namespace Jampiler.Code
 
         public override string ToString()
         {
-            return string.Format("{0}\n{1}\n{2}\n{3}", Register, Name, Value, Type);
+            return string.Format("{0}\t{1}", base.ToString(), Register);
         }
     }
 }

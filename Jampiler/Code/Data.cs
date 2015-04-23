@@ -6,8 +6,11 @@ namespace Jampiler.Code
 {
     public enum DataType
     {
+        Number,
         Asciz,
-        Operator
+        Operator,
+        Global,
+        Statement
     }
 
     public class Data
@@ -16,7 +19,10 @@ namespace Jampiler.Code
         public string Value;
         public string Name;
 
-        public Data() { }
+        public Data(DataType? type)
+        {
+            Type = type;
+        }
 
         public string Text()
         {
