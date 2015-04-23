@@ -50,7 +50,7 @@ namespace Jampiler.Code
             var firstStatement = TryParseStatement(first);
             _lines.Add(
                 firstStatement != null
-                    ? string.Format("\tmov r{0}, r{1}\n", startRegister, firstStatement)
+                    ? string.Format("\tmov r{0}, r{1}\n", Parent.AddRegister(first), firstStatement)
                     : ParseData(first));
 
             for (var i = 1; i < Data.Count - 1; i = i + 2) // Exclude first and last element
@@ -97,8 +97,6 @@ namespace Jampiler.Code
             }
 
             return statement.Register;
-
-            // Statement is already in a register, we need to add to that register
         }
 
         private string ParseData(Data data, bool isReturn = false)
