@@ -131,7 +131,7 @@ namespace Jampiler.Code
             }
         }
 
-        public void AssembleData(List<Data> data, bool storeRegisters = true)
+        public void AssembleData(List<Data> data, bool storeRegisters = true, bool moveToFirst = true)
         {
             if (data == null)
             {
@@ -183,7 +183,7 @@ namespace Jampiler.Code
             }
 
             // If register 0 isn't used as the final data store for the operation, the data must be moved into r0
-            if (startRegister != 0 && storeRegisters && firstData != null)
+            if (startRegister != 0 && storeRegisters && firstData != null && moveToFirst)
             {
                 Lines.Add(string.Format("\tmov r0, r{0}\n", startRegister));
             }
@@ -228,7 +228,7 @@ namespace Jampiler.Code
             {
                 case DataType.Asciz:
                     return string.Format(
-                        "\tldr r{0}, addr_{1}\n" + "\tldr r{0}, [r{0}]\n", isReturn ? 0 : AddRegister(data),
+                        "\tldr r{0}, addr_{1}\n", isReturn ? 0 : AddRegister(data),
                         secondReg.Name);
                 case DataType.Number:
                     if (Convert.ToInt32(secondReg.Value) >= 0 && Convert.ToInt32(secondReg.Value) <= 255)

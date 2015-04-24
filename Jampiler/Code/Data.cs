@@ -33,10 +33,14 @@ namespace Jampiler.Code
             }
 
             var type = Type.ToString().ToLower();
-            if (Type == DataType.Word)
+            switch (Type)
             {
-                type = "word";
+                case DataType.Word:
+                case DataType.Number:
+                    type = "word";
+                    break;
             }
+
 
             return string.Format("{0}: .{1}\t{2}\n", Name, type, Value);
         }

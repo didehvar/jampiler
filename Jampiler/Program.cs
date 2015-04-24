@@ -48,17 +48,17 @@ namespace Jampiler
             Logger.Instance.Debug();
 
             var parser = new Parser();
-            var node = parser.Parse(tokens);
+            var nodes = parser.Parse(tokens);
 
             Logger.Instance.Debug("----- NODES -----");
-            node.Print();
+            nodes.ForEach(n => n.Print());
             Logger.Instance.Debug("--- END NODES ---");
 
             Logger.Instance.Debug();
             Logger.Instance.Debug("----- OUTPUT -----");
 
             var codeGenerator = new CodeGenerator();
-            codeGenerator.Generate(node);
+            codeGenerator.Generate(nodes);
             var codeGenOutput = codeGenerator.Output();
             Logger.Instance.Debug(codeGenOutput);
 

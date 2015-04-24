@@ -13,14 +13,20 @@ namespace Jampiler.Core
 
         private IEnumerable<Token> _tokens;
 
-        public Node Parse(IEnumerable<Token> tokens)
+        public List<Node> Parse(IEnumerable<Token> tokens)
         {
             _tokens = tokens;
             _currentIndex = -1;
 
             NextToken();
 
-            return Function();
+            var tree = new List<Node>();
+            while (_currentToken.Type == TokenType.Function || _currentToken.Type == TokenType.Identifier)
+            {
+                tree.Add(_currentToken.Type == TokenType.Function ? Function() : Statement(true));
+            }
+
+            return tree;
         }
 
         private void NextToken()
@@ -100,14 +106,14 @@ namespace Jampiler.Core
             throw new Exception("Unexpected token");
         }
 
-        private Node Statement()
+        private Node Statement(bool global = false)
         {
             // statement = 'local’, identifier, [ '=', (string | number | identifier)]
             //           | identifier, '=', expression
             //           | identifier, arg list;
 
             var left = _currentToken;
-            if (Accept(TokenType.Local))
+            if (Accept(TokenType.Local) && !global)
             {
                 // identifier, [ '=', (string | number | identifier)]
                 var identifier = _currentToken;
@@ -136,6 +142,11 @@ namespace Jampiler.Core
                 {
                     // expression
                     return new Node(left, new Node(_lastToken, null, Expression()), null);
+                }
+
+                if (global)
+                {
+                    throw new Exception("Can only perform an assignment for a global");
                 }
 
                 // arg list
@@ -201,7 +212,7 @@ namespace Jampiler.Core
             var block = Block();
             block.Left = args;
 
-            return new Node(func, new Node(identifier), block); // block
+            return new Node(func, new Node(identifier), block);
         }
 
         private Node ReturnStatement()

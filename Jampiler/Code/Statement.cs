@@ -21,9 +21,12 @@
                 return null;
             }
 
-            return string.Format(
-                "\tmov r{0}, {1}\n", Register,
-                Type == DataType.Asciz ? string.Format("addr_{0}", Name) : string.Format("#{0}", Value));
+            if (Type == DataType.Asciz)
+            {
+                return string.Format("\tldr r{0}, addr_{1}\n", Register, Name);
+            }
+
+            return string.Format("\tmov r{0}, {1}\n", Register, string.Format("#{0}", Value));
         }
 
         public override string ToString()

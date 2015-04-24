@@ -1,5 +1,8 @@
+
+
 function main()
-  local bob = 10
-  print("%d %s %d\n", bob, "hello world", 10)
+  local number = 10
+  local string = "hello world"
+  print("%d %s\n", number, string)
   return nil
 end

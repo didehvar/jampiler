@@ -20,12 +20,18 @@ namespace Jampiler.Core
             Functions = new List<Function>();
         }
 
-        public void Generate(Node tree)
+        public void Generate(List<Node> nodes)
         {
             // First node is top of tree, work out what token each node is
-            if (tree.Type == TokenType.Function)
+            foreach (var n in nodes.Where(n => n.Type == TokenType.Identifier))
             {
-                Functions.Add(ParseFunction(tree));
+                Console.WriteLine("PARSING NON-FUNCTION {0}", n.ToString());
+                ParseStatement(null, n);
+            }
+
+            foreach (var n in nodes.Where(n => n.Type == TokenType.Function))
+            {
+                Functions.Add(ParseFunction(n));
             }
         }
 
@@ -94,10 +100,11 @@ namespace Jampiler.Core
             //           | identifier, '=', expression
             //           | identifier, arg list;
 
+            Logger.Instance.Debug("ParseStatement:\n{0}\n{1}\n{2}\n{3}", parent, node, node.Left, node.Left.Left);
             var statement = new Statement(parent);
 
             // 'local’, identifier, [ '=', (string | number | identifier)]
-            if (node.Left.Type == TokenType.Equals && node.Left.Left != null)
+            if (parent != null && node.Left.Type == TokenType.Equals && node.Left.Left != null)
             {
                 statement.Name = node.Value;
                 statement.Value = node.Left.Right.Value;
@@ -109,6 +116,7 @@ namespace Jampiler.Core
                         break;
 
                     case TokenType.String:
+                        Data.Add(new Data(DataType.Asciz) { Name = statement.Name, Value = statement.Value });
                         statement.Type = DataType.Asciz;
                         break;
 
@@ -120,11 +128,19 @@ namespace Jampiler.Core
             else if (node.Left.Type == TokenType.Equals)
             {
                 // Must add to the globals first as parse expression will try to find the data
-                var global = new Global { Name = node.Value };
-                Globals.Instance.List.Add(global);
+                var global = Globals.Instance.List.FirstOrDefault(g => g.Name == node.Value);
+                if (global == null)
+                {
+                    global = new Global { Name = node.Value };
+                    Globals.Instance.List.Add(global);
 
-                global.Datas = ParseExpression(parent, node.Left.Right);
+                    global.Datas = ParseExpression(parent, node.Left.Right, node);
+                }
                 return global;
+            }
+            else if (parent == null)
+            {
+                throw new Exception("Expected global");
             }
             // identifier, arg list;
             else
@@ -170,10 +186,10 @@ namespace Jampiler.Core
                             switch (nextNode.Type)
                             {
                                 case TokenType.Identifier:
-                                    Console.WriteLine("IDENTIFIER");
                                     // Local variables will already be loaded
                                     // Global variables are not loaded
 
+                                    Console.WriteLine("LOCDATA_ {0}", nextNode.ToString());
                                     var locData = GetDataWithName(parent, nextNode.Value);
                                     /*int regNum;
 
@@ -183,20 +199,32 @@ namespace Jampiler.Core
                                         Console.WriteLine("GLOBAL");
                                         regNum = parent.RegisterCount();
                                         parent.Lines.Add(parent.ParseData(locData));
-                                    }
-                                    // Otherwise simply store the register it uses
-                                    else
-                                    {
-                                        Console.WriteLine("LOCAL");
-                                        regNum = parent.Registers.FindIndex(r => r.Name == nextNode.Value);
+
+                                        switch (locData.Type)
+                                        {
+                                            case DataType.Number:
+
+                                                break;
+
+                                            default:
+                                                throw new NotImplementedException("Globals do not support this type");
+                                        }
                                     }*/
 
-                                    // If the data isn't in the count register then it has to be moved in
-                                    Console.WriteLine("DATA TYPE: {0}", locData.ToString());
-                                    parent.Lines.Add(
-                                        locData.Type == DataType.Number
-                                            ? string.Format("\tmov r{0}, #{1}\n", count++, locData.Value)
-                                            : string.Format("\tldr r{0}, addr_{1}\n", count++, locData.Name));
+                                    if (locData.Type == DataType.Global)
+                                    {
+                                        // Global variables may need loading in
+                                        var global = (Global) locData;
+                                        parent.AssembleData(global.Datas, false, false);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("DATA TYPE: {0}", locData.ToString());
+                                        parent.Lines.Add(
+                                            locData.Type == DataType.Number
+                                                ? string.Format("\tmov r{0}, #{1}\n", count++, locData.Value)
+                                                : string.Format("\tldr r{0}, addr_{1}\n", count++, locData.Name));
+                                    }
 
                                     break;
 
@@ -249,7 +277,7 @@ namespace Jampiler.Core
             return ret;
         }
 
-        private List<Data> ParseExpression(Function parent, Node node)
+        private List<Data> ParseExpression(Function parent, Node node, Node optionalIdentifier = null)
         {
             // expression = 'nil' | 'false' | 'true' | number | string, [ operator, expression ];
 
@@ -262,27 +290,27 @@ namespace Jampiler.Core
 
             while (currentNode.Type == TokenType.Operator)
             {
-                data.Add(ParseExpressionData(parent, currentNode.Left));
+                data.Add(ParseExpressionData(parent, currentNode.Left, optionalIdentifier));
                 data.Add(new Data(DataType.Operator) { Value = currentNode.Value });
 
                 currentNode = currentNode.Right;
             }
 
-            data.Add(ParseExpressionData(parent, currentNode));
+            data.Add(ParseExpressionData(parent, currentNode, optionalIdentifier));
             return data;
         }
 
-        private Data ParseExpressionData(Function parent, Node node)
+        private Data ParseExpressionData(Function parent, Node node, Node topNode = null)
         {
             // Just left hand of expression
             switch (node.Type)
             {
                 case TokenType.Number:
                     // Mov no into r0 register
-                    return new Data(DataType.Number) { Value = node.Value };
+                    return parent == null ? AddData(new Data(DataType.Number) { Name = topNode.Value, Value = node.Value }) : new Data(DataType.Number) { Value = node.Value };
 
                 case TokenType.String:
-                    return AddData(new Data(DataType.Asciz) { Value = node.Value, Name = parent.DataName() });
+                    return AddData(new Data(DataType.Asciz) { Value = node.Value, Name = parent == null ? topNode.Value : parent.DataName() });
 
                 case TokenType.Identifier:
                     // Identifier in an expression, must get identifier value
