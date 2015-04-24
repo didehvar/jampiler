@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Net.Mime;
-using System.Runtime.InteropServices;
 
 namespace Jampiler.Code
 {
@@ -34,13 +32,13 @@ namespace Jampiler.Code
                 return "";
             }
 
-            var type = Type.ToString();
+            var type = Type.ToString().ToLower();
             if (Type == DataType.Word)
             {
-                type = ".word";
+                type = "word";
             }
 
-            return string.Format("{0}: {1}\t{2}", Name, type, Value);
+            return string.Format("{0}: .{1}\t{2}\n", Name, type, Value);
         }
 
         public override string ToString()

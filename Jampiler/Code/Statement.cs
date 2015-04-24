@@ -1,9 +1,4 @@
-﻿using System;
-using System.Net.Mime;
-using System.Security.Cryptography;
-using Jampiler.Core;
-
-namespace Jampiler.Code
+﻿namespace Jampiler.Code
 {
     public class Statement : Data
     {

@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Threading;
 using Jampiler.AST;
-using Jampiler.Core;
 
 namespace Jampiler.Code
 {
@@ -24,11 +20,9 @@ namespace Jampiler.Code
 
         public readonly List<string> Lines = new List<string>();
 
-        private int _count = 0;
-        private int _regDeleteStart = 0;
-        private int _regMax = 0;
-
-        private Function() { }
+        private int _count;
+        private int _regDeleteStart;
+        private int _regMax;
 
         public Function(Node startNode, string name)
         {
@@ -182,7 +176,7 @@ namespace Jampiler.Code
                             break;
 
                         case "*":
-                            Lines.Add(string.Format("\tmul r{0}, r{1}\n", startRegister, ++currentRegister));
+                            Lines.Add(string.Format("\tmul r{0}, r{0}, r{1}\n", startRegister, ++currentRegister));
                             break;
                     }
                 }
@@ -200,7 +194,7 @@ namespace Jampiler.Code
             }
         }
 
-        private string TryParseStatement(Data data)
+        private Statement TryParseStatement(Data data)
         {
             if (!(data is Statement))
             {
@@ -213,7 +207,7 @@ namespace Jampiler.Code
                 throw new Exception("Can't add to null");
             }
 
-            return statement.Register.ToString();
+            return statement;
         }
 
         public string ParseData(Data data, bool isReturn = false)
@@ -223,19 +217,27 @@ namespace Jampiler.Code
                 return null;
             }
 
+            var secondReg = data;
             var statement = TryParseStatement(data);
             if (statement != null)
             {
-                statement = "r" + statement;
+                secondReg = statement;
             }
 
             switch (data.Type)
             {
                 case DataType.Asciz:
                     return string.Format(
-                        "\tldr r{0}, addr_{1}\n" + "\tldr r{0}, [r{0}]\n", isReturn ? 0 : AddRegister(data), statement ?? data.Name);
+                        "\tldr r{0}, addr_{1}\n" + "\tldr r{0}, [r{0}]\n", isReturn ? 0 : AddRegister(data),
+                        secondReg.Name);
                 case DataType.Number:
-                    return string.Format("\tmov r{0}, {1}\n", isReturn ? 0 : AddRegister(data), statement ?? "#" + data.Value);
+                    if (Convert.ToInt32(secondReg.Value) >= 0 && Convert.ToInt32(secondReg.Value) <= 255)
+                    {
+                        return string.Format(
+                            "\tmov r{0}, #{1}\n", isReturn ? 0 : AddRegister(data), secondReg.Value);
+                    }
+
+                    return string.Format("\tldr r{0}, ={1}\n", isReturn ? 0 : AddRegister(data), secondReg.Value);
 
                 case DataType.Global:
                     // Locate the global value then assign it to the correct register

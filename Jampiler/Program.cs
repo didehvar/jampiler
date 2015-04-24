@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Jampiler.Core;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Jampiler.Code;
+using Jampiler.Core;
 
 namespace Jampiler
 {
@@ -71,12 +69,17 @@ namespace Jampiler
             Logger.Instance.Debug("--- END OUTPUT ---");
 
             // Run assembler and linker and copy to pi
-            var prcoess = new Process();
+            var directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            if (directory == null)
+            {
+                throw new Exception("Failed to find working directory");
+            }
+
             var processStartInfo = new ProcessStartInfo()
             {
                 //WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = "cmd.exe",
-                WorkingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                WorkingDirectory = directory,
                 Arguments =
                     string.Format(
                         @"/k C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-gcc.exe -march=armv6 -mfloat-abi=hard -mfpu=vfp -o jam.out jam.s & " +

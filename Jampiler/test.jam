@@ -1,6 +1,5 @@
 function main()
-  local bob = 5
-  trevor = 91 * 4 * bob
-  print("{0}", trevor)
+  local bob = 10
+  print("%d %s %d\n", bob, "hello world", 10)
   return nil
 end

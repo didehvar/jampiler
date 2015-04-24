@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using System.Security.AccessControl;
 using Jampiler.AST;
 using Jampiler.Code;
 
@@ -13,6 +11,8 @@ namespace Jampiler.Core
         public List<Data> Data { get; set; }
 
         public List<Function> Functions { get; set; }
+
+        private readonly List<string> _externals = new List<string>(); 
 
         public CodeGenerator()
         {
@@ -66,8 +66,9 @@ namespace Jampiler.Core
             var text = Functions.Aggregate(".text\n\n", (current, f) => current + f.Text());
             var addr = Data.Where(a => a.Name != null)
                 .Aggregate("", (current, a) => string.Format("{0}\naddr_{1}: .word {1}", current, a.Name));
+            var externals = _externals.Aggregate("/* externals */\n", (current, e) => current + string.Format(".global {0}\n", e));
 
-            return string.Format("{0}\n{1}\n{2}", data, text, addr);
+            return string.Format("{0}\n{1}\n{2}\n\n{3}", data, text, addr, externals);
         }
 
         private static void Expect(Node node, TokenType type)
@@ -133,6 +134,12 @@ namespace Jampiler.Core
                 switch (node.Value)
                 {
                     case "print":
+                        // Need to load as an external to call the C runtime function
+                        if (!_externals.Contains("printf"))
+                        {
+                            _externals.Add("printf");
+                        }
+
                         var data = new Data(DataType.Return)
                         {
                             Name = "return" + Data.Count,
@@ -147,7 +154,15 @@ namespace Jampiler.Core
                         parent.Lines.Add(string.Format("\n\tldr r{0}, addr_{1}\n", register, data.Name));
                         parent.Lines.Add(string.Format("\tstr lr, [r{0}]\n\n", register));
 
-                        var nextNode = node.Left;
+                        // Store initial printf string
+                        var name = "printf" + Data.Count;
+                        Data.Add(new Data(DataType.Asciz) { Name = name, Value = node.Left.Value });
+
+                        // Load string into register
+                        parent.Lines.Add(string.Format("\tldr r0, addr_{0}\n\n", name));
+
+                        var nextNode = node.Left.Right;
+                        var count = 1; // Registers used for printf
                         while (nextNode != null)
                         {
                             Console.WriteLine("TYPE {0}", nextNode);
@@ -160,7 +175,7 @@ namespace Jampiler.Core
                                     // Global variables are not loaded
 
                                     var locData = GetDataWithName(parent, nextNode.Value);
-                                    var regNum = 0;
+                                    /*int regNum;
 
                                     // If its a global variable load it into a register 
                                     if (locData is Global)
@@ -174,24 +189,36 @@ namespace Jampiler.Core
                                     {
                                         Console.WriteLine("LOCAL");
                                         regNum = parent.Registers.FindIndex(r => r.Name == nextNode.Value);
-                                    }
+                                    }*/
 
-                                    // If the data isn't in register 0, then it needs to be moved in
-                                    if (regNum != 0)
-                                    {
-                                        parent.Lines.Add(string.Format("\n\tmov r0, r{0}\n", regNum));
-                                    }
+                                    // If the data isn't in the count register then it has to be moved in
+                                    Console.WriteLine("DATA TYPE: {0}", locData.ToString());
+                                    parent.Lines.Add(
+                                        locData.Type == DataType.Number
+                                            ? string.Format("\tmov r{0}, #{1}\n", count++, locData.Value)
+                                            : string.Format("\tldr r{0}, addr_{1}\n", count++, locData.Name));
 
+                                    break;
+
+                                case TokenType.String:
+                                    var strName = "printfstr" + Data.Count;
+                                    Data.Add(new Data(DataType.Asciz) { Name = strName, Value = nextNode.Value });
+
+                                    parent.Lines.Add(string.Format("\tldr r{0}, addr_{1}\n", count++, strName));
+                                    break;
+
+                                case TokenType.Number:
+                                    parent.Lines.Add(string.Format("\tmov r{0}, #{1}\n", count++, nextNode.Value));
                                     break;
 
                                 default:
                                     throw new NotImplementedException("Other types currently not supported");
                             }
 
-                            parent.Lines.Add("\tbl puts\n\n");
-
                             nextNode = nextNode.Right;
                         }
+
+                        parent.Lines.Add("\tbl printf\n\n");
 
                         // Restore lr
                         parent.Lines.Add(string.Format("\tldr r{0}, addr_{1}\n", register, data.Name));
