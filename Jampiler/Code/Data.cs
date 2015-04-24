@@ -11,7 +11,8 @@ namespace Jampiler.Code
         Statement,
         Nil,
         Return,
-        Word
+        Word,
+        Function
     }
 
     public class Data

@@ -51,8 +51,12 @@ namespace Jampiler.Code
             if (data is Statement)
             {
                 var s = (Statement) data;
-                s.Register = AddRegister(data);
-                Lines.Add(s.LoadText());
+
+                if (data.Type != DataType.Function)
+                {
+                    s.Register = AddRegister(data);
+                    Lines.Add(s.LoadText());
+                }
 
                 Statements.Add(s);
             }
@@ -60,7 +64,15 @@ namespace Jampiler.Code
 
         public string Text()
         {
-            var s = string.Format(".global\t{0}\n{0}:\n", Name);
+            var s = "";
+
+            if (Name == "main")
+            {
+                s += ".global main\n";
+            }
+
+            s += string.Format("{0}:\n", Name);
+
             var pop = "";
 
             // Store result of r4-r12 if used
@@ -86,6 +98,20 @@ namespace Jampiler.Code
             s += "\tbx lr\n";
 
             return s;
+        }
+
+        public void StoreLR(Data data, int register)
+        {
+            // Store lr before puts replaces it
+            Lines.Add(string.Format("\n\tldr r{0}, addr_{1}\n", register, data.Name));
+            Lines.Add(string.Format("\tstr lr, [r{0}]\n\n", register));
+        }
+
+        public void LoadLR(Data data, int register)
+        {
+            // Restore lr
+            Lines.Add(string.Format("\tldr lr, addr_{1}\n", register, data.Name));
+            Lines.Add(string.Format("\tldr lr, [lr]\n\n", register));
         }
 
         public string DataName()
@@ -230,6 +256,7 @@ namespace Jampiler.Code
                     return string.Format(
                         "\tldr r{0}, addr_{1}\n", isReturn ? 0 : AddRegister(data),
                         secondReg.Name);
+
                 case DataType.Number:
                     if (Convert.ToInt32(secondReg.Value) >= 0 && Convert.ToInt32(secondReg.Value) <= 255)
                     {

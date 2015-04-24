@@ -1,0 +1,21 @@
+number = 10 // global variables
+string = "hello world"
+
+function hello()
+  // print the number and string with the specified format
+  print("%d %s\n", number, string)
+  
+  // return from hello to calling function
+  return 5
+end
+
+function main()
+  // assign function result to local variable
+  local ret = hello()
+  
+  // print using local variables
+  print("%d\n", ret)
+  
+  // return from main
+  return nil
+end

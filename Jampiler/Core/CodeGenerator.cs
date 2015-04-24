@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Jampiler.AST;
 using Jampiler.Code;
 
@@ -48,9 +49,21 @@ namespace Jampiler.Core
                 return func;
             }
 
+            var data = new Data(DataType.Return)
+            {
+                Name = "return" + Data.Count,
+                Type = DataType.Word,
+                Value = "0"
+            };
+            Data.Add(data);
+
+            var lrRegister = func.AddRegister(data);
+            func.StoreLR(data, lrRegister);
+
             var statement = funcNode.Right.Right;
             do
             {
+
                 if (statement.Type == TokenType.Return)
                 {
                     func.AddReturn(ParseReturn(func, statement));
@@ -62,6 +75,8 @@ namespace Jampiler.Core
 
                 statement = statement.Right;
             } while (statement != null);
+
+            func.LoadLR(data, lrRegister);
 
             return func;
         }
@@ -96,15 +111,14 @@ namespace Jampiler.Core
 
         private Data ParseStatement(Function parent, Node node)
         {
-            // statement = 'local’, identifier, [ '=', (string | number | identifier)]
+            // statement = 'local’, identifier, [ '=', ( string | number | identifier [ arg list ] ) ]
             //           | identifier, '=', expression
             //           | identifier, arg list;
 
-            Logger.Instance.Debug("ParseStatement:\n{0}\n{1}\n{2}\n{3}", parent, node, node.Left, node.Left.Left);
             var statement = new Statement(parent);
 
             // 'local’, identifier, [ '=', (string | number | identifier)]
-            if (parent != null && node.Left.Type == TokenType.Equals && node.Left.Left != null)
+            if (parent != null && node.Left != null && node.Left.Type == TokenType.Equals && node.Left.Left != null)
             {
                 statement.Name = node.Value;
                 statement.Value = node.Left.Right.Value;
@@ -120,12 +134,16 @@ namespace Jampiler.Core
                         statement.Type = DataType.Asciz;
                         break;
 
+                    case TokenType.Identifier:
+                        statement.Type = DataType.Function;
+                        break;
+
                     default:
                         throw new NotImplementedException("Unsupported type");
                 }
             }
             // identifier, '=', expression
-            else if (node.Left.Type == TokenType.Equals)
+            else if (node.Left != null && node.Left.Type == TokenType.Equals)
             {
                 // Must add to the globals first as parse expression will try to find the data
                 var global = Globals.Instance.List.FirstOrDefault(g => g.Name == node.Value);
@@ -146,6 +164,12 @@ namespace Jampiler.Core
             else
             {
                 statement.Name = node.Value;
+                Logger.Instance.Debug("PS() => (id, arg) => {0}", node);
+
+                if (node.Type == TokenType.Whitespace)
+                {
+                    return statement;
+                }
 
                 switch (node.Value)
                 {
@@ -156,26 +180,9 @@ namespace Jampiler.Core
                             _externals.Add("printf");
                         }
 
-                        var data = new Data(DataType.Return)
-                        {
-                            Name = "return" + Data.Count,
-                            Type = DataType.Word,
-                            Value = "0"
-                        };
-                        Data.Add(data);
-
-                        var register = parent.AddRegister(data);
-
-                        // Store lr before puts replaces it
-                        parent.Lines.Add(string.Format("\n\tldr r{0}, addr_{1}\n", register, data.Name));
-                        parent.Lines.Add(string.Format("\tstr lr, [r{0}]\n\n", register));
-
                         // Store initial printf string
                         var name = "printf" + Data.Count;
                         Data.Add(new Data(DataType.Asciz) { Name = name, Value = node.Left.Value });
-
-                        // Load string into register
-                        parent.Lines.Add(string.Format("\tldr r0, addr_{0}\n\n", name));
 
                         var nextNode = node.Left.Right;
                         var count = 1; // Registers used for printf
@@ -189,42 +196,7 @@ namespace Jampiler.Core
                                     // Local variables will already be loaded
                                     // Global variables are not loaded
 
-                                    Console.WriteLine("LOCDATA_ {0}", nextNode.ToString());
-                                    var locData = GetDataWithName(parent, nextNode.Value);
-                                    /*int regNum;
-
-                                    // If its a global variable load it into a register 
-                                    if (locData is Global)
-                                    {
-                                        Console.WriteLine("GLOBAL");
-                                        regNum = parent.RegisterCount();
-                                        parent.Lines.Add(parent.ParseData(locData));
-
-                                        switch (locData.Type)
-                                        {
-                                            case DataType.Number:
-
-                                                break;
-
-                                            default:
-                                                throw new NotImplementedException("Globals do not support this type");
-                                        }
-                                    }*/
-
-                                    if (locData.Type == DataType.Global)
-                                    {
-                                        // Global variables may need loading in
-                                        var global = (Global) locData;
-                                        parent.AssembleData(global.Datas, false, false);
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("DATA TYPE: {0}", locData.ToString());
-                                        parent.Lines.Add(
-                                            locData.Type == DataType.Number
-                                                ? string.Format("\tmov r{0}, #{1}\n", count++, locData.Value)
-                                                : string.Format("\tldr r{0}, addr_{1}\n", count++, locData.Name));
-                                    }
+                                    LoadIdentifier(nextNode, parent, count++);
 
                                     break;
 
@@ -246,16 +218,24 @@ namespace Jampiler.Core
                             nextNode = nextNode.Right;
                         }
 
+                        // Load string into register
+                        parent.Lines.Add(string.Format("\tldr r0, addr_{0}\n\n", name));
                         parent.Lines.Add("\tbl printf\n\n");
-
-                        // Restore lr
-                        parent.Lines.Add(string.Format("\tldr r{0}, addr_{1}\n", register, data.Name));
-                        parent.Lines.Add(string.Format("\tldr lr, [r{0}]\n\n", register));
 
                         break;
 
                     default:
-                        throw new NotImplementedException("Undefined functions not supported");
+                        // Assume this is an identifier
+                        // Find function with the name of this identifier
+                        var func = Functions.FirstOrDefault(f => f.Name == node.Value);
+                        if (func == null)
+                        {
+                            throw new Exception("Attempt to call undefined function");
+                        }
+
+                        parent.Lines.Add(string.Format("\tbl {0}\n\n", node.Value));
+
+                        break;
                 }
             }
 
@@ -264,7 +244,7 @@ namespace Jampiler.Core
 
         private Return ParseReturn(Function parent, Node node)
         {
-            // return statement = ‘return’ expression;
+            // return statement = 'return’ expression;
 
             var ret = new Return(parent);
 
@@ -317,7 +297,8 @@ namespace Jampiler.Core
                     return GetDataWithName(parent, node.Value);
 
                 case TokenType.Nil:
-                    return null;
+                    Console.WriteLine("RETURNNIL");
+                    return new Data(DataType.Number) { Value = "0" };
 
                 default:
                     throw new NotImplementedException("Data type not supported");
@@ -350,6 +331,60 @@ namespace Jampiler.Core
             }
 
             throw new Exception("Identifier not found");
+        }
+
+        private void LoadIdentifier(Node identifierNode, Function parent, int register)
+        {
+            Console.WriteLine("LoadIdentifier() {0}", identifierNode.ToString());
+            var locData = GetDataWithName(parent, identifierNode.Value);
+
+            switch (locData.Type)
+            {
+                case DataType.Global:
+                    var global = (Global)locData;
+                    parent.AssembleData(global.Datas, false, false);
+                    break;
+
+                case DataType.Number:
+                    parent.Lines.Add(string.Format("\tmov r{0}, #{1}\n", register, locData.Value));
+                    break;
+
+                case DataType.Asciz:
+                    parent.Lines.Add(string.Format("\tldr r{0}, addr_{1}\n", register, locData.Name));
+                    break;
+
+                case DataType.Function:
+                    // Check if anything is already in r0 (function return)
+                    int? backupReg = null;
+                    var backupData = parent.Registers.ElementAtOrDefault(0);
+                    if (backupData != null)
+                    {
+                        // Move into an unused register
+                        backupReg = parent.AddRegister(backupData) + 1;
+                        parent.Lines.Add(string.Format("\tmov r{0}, r0\n", backupReg));
+                    }
+
+                    // Call function
+                    parent.Lines.Add(string.Format("\tbl {0}\n", locData.Value));
+
+                    // Result of function is in r0
+                    // Move that into the required register
+                    if (register != 0)
+                    {
+                        parent.Lines.Add(string.Format("\tmov r{0}, r0\n", register));
+                    }
+
+                    // If data was backed up restore it
+                    if (backupReg != null)
+                    {
+                        parent.Lines.Add(string.Format("\tmov r0, r{0}\n", backupReg));
+                    }
+
+                    break;
+
+                default:
+                    throw new NotImplementedException("Cannot load this data type as an identifier");
+            }
         }
     }
 }
