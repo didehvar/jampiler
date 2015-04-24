@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Jampiler.AST;
+using Jampiler.Core;
 
 namespace Jampiler.Code
 {
@@ -94,6 +95,7 @@ namespace Jampiler.Code
             }
 
             s += string.Format("{0}\n", Lines.Aggregate("", (current, line) => current + line));
+            s += string.Format("end{0}:\n", Name);
             s += pop;
             s += "\tbx lr\n";
 
@@ -110,8 +112,8 @@ namespace Jampiler.Code
         public void LoadLR(Data data, int register)
         {
             // Restore lr
-            Lines.Add(string.Format("\tldr lr, addr_{1}\n", register, data.Name));
-            Lines.Add(string.Format("\tldr lr, [lr]\n\n", register));
+            Lines.Add(string.Format("\n\tldr lr, addr_{1}\n", register, data.Name));
+            Lines.Add(string.Format("\tldr lr, [lr]\n", register));
         }
 
         public string DataName()
@@ -181,6 +183,7 @@ namespace Jampiler.Code
 
             var first = data.ElementAt(0);
             var firstData = ParseData(first);
+            Lines.Add("\t/* start assembledata() */\n");
             Lines.Add(firstData);
 
             if (data.Count > 1)
@@ -218,6 +221,148 @@ namespace Jampiler.Code
             {
                 EndRegisterStore();
             }
+
+            Lines.Add("\t/* end assembledata() */\n");
+        }
+
+        public void AssembleDataIf(CodeGenerator codeGenerator, Node ifnode, List<Data> data, bool storeRegisters = true, bool moveToFirst = true)
+        {
+            // Left is block
+            // Left left is comparison
+
+            if (data == null)
+            {
+                throw new NotImplementedException("Missing if data");
+            }
+
+            if (storeRegisters)
+            {
+                StartRegisterStore();
+            }
+
+            var startRegister = RegisterCount();
+
+            Console.WriteLine();
+            Console.WriteLine("DATA FOR ASSEMBLEDATAIF");
+            foreach (var d in data)
+            {
+                Console.WriteLine(d?.ToString());
+            }
+            Console.WriteLine();
+
+            var ifLabelNumber = Lines.Count;
+
+            var first = data.ElementAt(0);
+            var firstData = ParseData(first);
+            Lines.Add("\t/* start assembledataif() */\n");
+            Lines.Add(firstData);
+
+            var afterLines = new List<string>();
+
+            if (data.Count > 1)
+            {
+                // Increment start register for if, cannot use left hand side of comparison
+                var ifRegister = startRegister + 1;
+                var currentRegister = ifRegister;
+
+                for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
+                {
+                    var right = data.ElementAt(i + 1);
+                    var op = data.ElementAt(i);
+
+                    // Left element is in register [start register]
+                    // Right element is in register [start register + 1]
+                    Lines.Add(ParseData(right));
+
+                    switch (op.Value)
+                    {
+                        case "+":
+                            Lines.Add(string.Format("\tadd r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                            break;
+
+                        case "*":
+                            Lines.Add(string.Format("\tmul r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                            break;
+
+                        case "-":
+                            Lines.Add(string.Format("\tsub r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                            break;
+                    }
+                }
+            }
+
+            // Calculations have been worked out, check compares
+            if (data.Count > 1)
+            {
+                var currentRegister = startRegister;
+                for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
+                {
+                    var op = data.ElementAt(i);
+
+                    switch (op.Value)
+                    {
+                        case "<":
+                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                            Lines.Add(string.Format("\tbge endif{0}\n", ifLabelNumber));
+                            break;
+
+                        case ">":
+                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                            Lines.Add(string.Format("\tble endif{0}\n", ifLabelNumber));
+                            break;
+
+                        case ">=":
+                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                            Lines.Add(string.Format("\tblt endif{0}\n", ifLabelNumber));
+                            break;
+
+                        case "<=":
+                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                            Lines.Add(string.Format("\tbgt endif{0}\n", ifLabelNumber));
+                            break;
+
+                        case "==":
+                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                            Lines.Add(string.Format("\tbne endif{0}\n", ifLabelNumber));
+                            break;
+
+                        case "!=":
+                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                            Lines.Add(string.Format("\tbeq endif{0}\n", ifLabelNumber));
+                            break;
+                    }
+                }
+            }
+
+            // If register 0 isn't used as the final data store for the operation, the data must be moved into r0
+            if (startRegister != 0 && storeRegisters && firstData != null && moveToFirst)
+            {
+                Lines.Add(string.Format("\tmov r0, r{0}\n", startRegister));
+            }
+
+            var ifStatement = ifnode.Left.Right;
+            do
+            {
+                if (ifStatement.Type == TokenType.Return)
+                {
+                    AddReturn(codeGenerator.ParseReturn(this, ifStatement));
+                    Lines.Add(string.Format("\tb end{0}\n", Name));
+                }
+                else
+                {
+                    AddData(codeGenerator.ParseStatement(this, ifStatement));
+                }
+
+                ifStatement = ifStatement.Right;
+            } while (ifStatement != null);
+
+            if (storeRegisters)
+            {
+                EndRegisterStore();
+            }
+
+            Lines.Add(string.Format("endif{0}:\n", ifLabelNumber));
+            Lines.Add("\t/* end assembledataif() */\n\n");
         }
 
         private Statement TryParseStatement(Data data)
@@ -227,7 +372,7 @@ namespace Jampiler.Code
                 return null;
             }
 
-            var statement = (Statement)data;
+            var statement = (Statement) data;
             if (statement.Register == null)
             {
                 throw new Exception("Can't add to null");
@@ -243,28 +388,38 @@ namespace Jampiler.Code
                 return null;
             }
 
+            var register = AddRegister(data);
+
+            // Check for existing register
             var secondReg = data;
             var statement = TryParseStatement(data);
             if (statement != null)
             {
                 secondReg = statement;
+
+                Console.WriteLine("IS STATEMENT: {0}", statement);
+                if (statement.Register != null)
+                {
+                    // Statement already exists in register, simply load it into the required register
+                    return string.Format("\tmov r{0}, r{1}\n", register, statement.Register);
+                }
             }
 
             switch (data.Type)
             {
                 case DataType.Asciz:
                     return string.Format(
-                        "\tldr r{0}, addr_{1}\n", isReturn ? 0 : AddRegister(data),
+                        "\tldr r{0}, addr_{1}\n", isReturn ? 0 : register,
                         secondReg.Name);
 
                 case DataType.Number:
                     if (Convert.ToInt32(secondReg.Value) >= 0 && Convert.ToInt32(secondReg.Value) <= 255)
                     {
                         return string.Format(
-                            "\tmov r{0}, #{1}\n", isReturn ? 0 : AddRegister(data), secondReg.Value);
+                            "\tmov r{0}, #{1}\n", isReturn ? 0 : register, secondReg.Value);
                     }
 
-                    return string.Format("\tldr r{0}, ={1}\n", isReturn ? 0 : AddRegister(data), secondReg.Value);
+                    return string.Format("\tldr r{0}, ={1}\n", isReturn ? 0 : register, secondReg.Value);
 
                 case DataType.Global:
                     // Locate the global value then assign it to the correct register

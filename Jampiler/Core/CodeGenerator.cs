@@ -63,7 +63,6 @@ namespace Jampiler.Core
             var statement = funcNode.Right.Right;
             do
             {
-
                 if (statement.Type == TokenType.Return)
                 {
                     func.AddReturn(ParseReturn(func, statement));
@@ -109,7 +108,7 @@ namespace Jampiler.Core
         }
 
 
-        private Data ParseStatement(Function parent, Node node)
+        public Data ParseStatement(Function parent, Node node)
         {
             // statement = 'local’, identifier, [ '=', ( string | number | identifier [ arg list ] ) ]
             //           | identifier, '=', expression
@@ -159,6 +158,13 @@ namespace Jampiler.Core
             else if (parent == null)
             {
                 throw new Exception("Expected global");
+            }
+            // 'if', expression, block, [ 'else', block ], 'end if';
+            else if (node.Type == TokenType.If)
+            {
+                // Left is block
+                // Left left is comparison
+                parent.AssembleDataIf(this, node, ParseExpression(parent, node.Left.Left), true, false);
             }
             // identifier, arg list;
             else
@@ -242,7 +248,7 @@ namespace Jampiler.Core
             return statement;
         }
 
-        private Return ParseReturn(Function parent, Node node)
+        public Return ParseReturn(Function parent, Node node)
         {
             // return statement = 'return’ expression;
 

@@ -22,6 +22,10 @@ namespace Jampiler.Core
         Function,
         Block,
         Comment,
+        If,
+        EndIf,
+        Else,
+        Then,
         EndOfFile
     };
 

@@ -108,9 +108,10 @@ namespace Jampiler.Core
 
         private Node Statement(bool global = false)
         {
-            // statement = 'local’, identifier, [ '=', (string | number | identifier)]
-            //           | identifier, '=', expression
-            //           | identifier, arg list;
+            // statement = ‘local’, identifier, [ ‘=‘, ( string | number | identifier [ arg list ] ) ]
+            //      | identifier, ‘=‘, expression
+            //      | identifier, arg list
+            //      | 'if', expression, block, [ 'else', block ], 'end if';
 
             var left = _currentToken;
             if (Accept(TokenType.Local) && !global)
@@ -135,7 +136,8 @@ namespace Jampiler.Core
 
                 return new Node(identifier, new Node(equals, new Node(left), new Node(_lastToken)), null);
             }
-            else if (Accept(TokenType.Identifier))
+
+            if (Accept(TokenType.Identifier))
             {
                 // '=', expression
                 if (Accept(TokenType.Equals))
@@ -153,15 +155,27 @@ namespace Jampiler.Core
                 return new Node(left, ArgumentList(), null);
             }
 
+            if (Accept(TokenType.If))
+            {
+                // First if branch
+                var comparison = Expression();
+
+                Expect(TokenType.Then);
+
+                var node = new Node(TokenType.If, "if") { Left = Block() };
+                node.Left.Left = comparison;
+
+                Expect(TokenType.EndIf);
+
+                return node;
+            }
+
             throw new Exception("Unexpected token");
         }
 
         private Node Block()
         {
-            // block = { statement }, [ return statement ], 'end';
-            // statement = 'local’, identifier, [ '=', (string | number | identifier)]
-            //           | identifier, '=', expression
-            //           | identifier, arg list;
+            // block = { statement }, [ return statement ];
 
             // If this isn't a statement/return/end then the token is unexpected
             if (_currentToken.Type != TokenType.Local && _currentToken.Type != TokenType.Identifier &&
@@ -174,7 +188,7 @@ namespace Jampiler.Core
             var nextNode = node;
 
             // Parse statements until the end is reached
-            while (_currentToken.Type != TokenType.End)
+            while (_currentToken.Type != TokenType.End && _currentToken.Type != TokenType.EndIf)
             {
                 switch (_currentToken.Type) {
                     case TokenType.Return:
@@ -183,7 +197,13 @@ namespace Jampiler.Core
 
                     case TokenType.Local:
                     case TokenType.Identifier:
+                    case TokenType.If:
                         nextNode.Right = Statement();
+                        nextNode = nextNode.Right;
+                        break;
+
+                    case TokenType.OpenBracket:
+                        nextNode.Right = ArgumentList();
                         nextNode = nextNode.Right;
                         break;
 
@@ -192,14 +212,12 @@ namespace Jampiler.Core
                 }
             }
 
-            Expect(TokenType.End);
-
             return node;
         }
 
         private Node Function()
         {
-            // function = ‘function’, identifier, arg list, block;
+            // function = 'function’, identifier, arg list, block, 'end';
 
             Expect(TokenType.Function);
             var func = _lastToken;
@@ -212,12 +230,14 @@ namespace Jampiler.Core
             var block = Block();
             block.Left = args;
 
+            Expect(TokenType.End);
+
             return new Node(func, new Node(identifier), block);
         }
 
         private Node ReturnStatement()
         {
-            // return statement = ‘return’ expression;
+            // return statement = 'return’ expression;
 
             Expect(TokenType.Return);
             return new Node(_lastToken, Expression(), null);
@@ -225,11 +245,11 @@ namespace Jampiler.Core
 
         private Node ArgumentList()
         {
-            // arg list = ‘(‘, [ args ], ‘)’;
+            // arg list = '(', [ args ], ')’;
 
             Expect(TokenType.OpenBracket);
 
-            Node args = null;
+            var args = new Node(TokenType.Whitespace, "");
             if (_currentToken.Type != TokenType.CloseBracket)
             {
                 args = Arguments();
@@ -250,7 +270,7 @@ namespace Jampiler.Core
 
         private Node Arguments()
         {
-            // args = argument, { ‘,’, argument };
+            // args = argument, { ',’, argument };
 
             var node = Argument();
             var nextNode = node;
