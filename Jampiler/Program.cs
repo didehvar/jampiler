@@ -13,9 +13,9 @@ namespace Jampiler
         private static void Main(string[] args)
         {
 #if !DEBUG
-            if (args.Length != 2)
+            if (args.Length < 1 || args.Length > 2)
             {
-                Logger.Instance.Debug("Invalid arguments, correct usage: jampiler.exe {file} {pi ip}");
+                Logger.Instance.Error("Invalid arguments, correct usage: jampiler.exe {file} {ip}");
                 return;
             }
 
@@ -31,37 +31,39 @@ namespace Jampiler
                 lexer.AddDefinition(new TokenDefinition(pair.Key, pair.Value));
             }
 
+#if DEBUG
             var program = File.ReadAllText(@"../../test.jam");
+#else
+            var program = File.ReadAllText(args.ElementAtOrDefault(0));
+#endif
+
             Logger.Instance.Debug(program);
 
             var lexTokens = lexer.Tokenize(program);
             var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
 
-            Logger.Instance.Debug();
-            Logger.Instance.Debug("----- TOKENS -----");
+            Logger.Instance.Debug("\n----- TOKENS -----");
             foreach (var token in tokens)
             {
                 Logger.Instance.Debug(token.ToString());
             }
             Logger.Instance.Debug("--- END TOKENS ---");
 
-            Logger.Instance.Debug();
-
             var parser = new Parser();
             var nodes = parser.Parse(tokens);
 
-            Logger.Instance.Debug("----- NODES -----");
+            Logger.Instance.Debug("\n----- NODES -----");
             nodes.ForEach(n => n.Print());
             Logger.Instance.Debug("--- END NODES ---");
 
-            Logger.Instance.Debug();
-            Logger.Instance.Debug("----- OUTPUT -----");
+            Logger.Instance.Debug("\n----- OUTPUT -----");
 
             var codeGenerator = new CodeGenerator();
             codeGenerator.Generate(nodes);
             var codeGenOutput = codeGenerator.Output();
             Logger.Instance.Debug(codeGenOutput);
 
+            // Write assembly to file
             var file = new StreamWriter(@"jam.s");
             file.WriteLine(codeGenOutput);
             file.Close();
@@ -75,17 +77,26 @@ namespace Jampiler
                 throw new Exception("Failed to find working directory");
             }
 
+            var arguments = "/k arm-linux-gnueabihf-gcc -march=armv6 -mfloat-abi=hard -mfpu=vfp -o jam.out jam.s";
+#if DEBUG
+            arguments +=
+                string.Format(
+                    @" & pscp -pw raspberry jam.out pi@{0}:/home/pi & putty -pw raspberry -m chmod pi@{0}",
+                    args.ElementAtOrDefault(1) ?? "192.168.1.34");
+#else
+           arguments +=
+                string.Format(
+                    @" & pscp -pw raspberry jam.out pi@{0}:/home/pi & " +
+                    @"putty -pw raspberry -m chmod pi@{0}",
+                    args.ElementAtOrDefault(1) ?? "192.168.1.34");
+#endif
+
             var processStartInfo = new ProcessStartInfo()
             {
                 //WindowStyle = ProcessWindowStyle.Hidden,
                 FileName = "cmd.exe",
                 WorkingDirectory = directory,
-                Arguments =
-                    string.Format(
-                        @"/k C:\SysGCC\raspberry\bin\arm-linux-gnueabihf-gcc.exe -march=armv6 -mfloat-abi=hard -mfpu=vfp -o jam.out jam.s & " +
-                        @"C:\Users\James\Documents\pscp.exe -pw raspberry jam.out pi@{0}:/home/pi & " +
-                        @"C:\Users\James\Documents\putty.exe -pw raspberry -m C:\Users\James\Documents\GitHub\Jampiler\chmod pi@192.168.1.34",
-                        args.ElementAtOrDefault(1) ?? "192.168.1.34"),
+                Arguments = arguments,
                 RedirectStandardInput = true,
                 UseShellExecute = false
             };

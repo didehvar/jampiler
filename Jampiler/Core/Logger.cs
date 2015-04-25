@@ -2,6 +2,9 @@
 
 namespace Jampiler.Core
 {
+    /// <summary>
+    /// Singleton used for outputting messages.
+    /// </summary>
     public class Logger
     {
         private static Logger _instance;
@@ -13,6 +16,12 @@ namespace Jampiler.Core
         public void Debug(string message = "", params object[] args)
         {
 #if DEBUG
+            Error(message, args);
+#endif
+        }
+
+        public void Error(string message = "", params object[] args)
+        {
             if (args.Length > 0)
             {
                 Console.WriteLine(message, args);
@@ -21,7 +30,6 @@ namespace Jampiler.Core
             {
                 Console.WriteLine(message);
             }
-#endif
         }
     }
 }
