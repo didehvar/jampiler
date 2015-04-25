@@ -168,6 +168,7 @@ namespace Jampiler.Core
                 return new Node(left);
             }
 
+            // if
             if (Accept(TokenType.If))
             {
                 // First if branch
@@ -183,6 +184,22 @@ namespace Jampiler.Core
                 return node;
             }
 
+            // while
+            if (Accept(TokenType.While))
+            {
+                // expression
+                var comparison = Expression();
+
+                Expect(TokenType.Then);
+
+                var node = new Node(TokenType.While, "while") { Left = Block() };
+                node.Left.Left = comparison;
+
+                Expect(TokenType.EndWhile);
+
+                return node;
+            }
+
             throw new Exception("Unexpected token");
         }
 
@@ -192,7 +209,8 @@ namespace Jampiler.Core
 
             // If this isn't a statement/return/end then the token is unexpected
             if (_currentToken.Type != TokenType.Local && _currentToken.Type != TokenType.Identifier &&
-                _currentToken.Type != TokenType.Return && _currentToken.Type != TokenType.End)
+                _currentToken.Type != TokenType.Return && _currentToken.Type != TokenType.End &&
+                _currentToken.Type != TokenType.If && _currentToken.Type != TokenType.While)
             {
                 throw new Exception("Unexpected token");
             }
@@ -201,7 +219,7 @@ namespace Jampiler.Core
             var nextNode = node;
 
             // Parse statements until the end is reached
-            while (_currentToken.Type != TokenType.End && _currentToken.Type != TokenType.EndIf)
+            while (_currentToken.Type != TokenType.End && _currentToken.Type != TokenType.EndIf && _currentToken.Type != TokenType.EndWhile)
             {
                 switch (_currentToken.Type) {
                     case TokenType.Return:
@@ -211,6 +229,7 @@ namespace Jampiler.Core
                     case TokenType.Local:
                     case TokenType.Identifier:
                     case TokenType.If:
+                    case TokenType.While:
                         nextNode.Right = Statement();
                         nextNode = nextNode.Right;
                         break;

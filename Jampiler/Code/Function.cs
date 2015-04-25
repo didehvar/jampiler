@@ -53,9 +53,20 @@ namespace Jampiler.Code
             {
                 var s = (Statement) data;
 
-                if (data.Type != DataType.Function)
+                // Check that this data doesn't already have a register
+                var existingReg = Registers.FirstOrDefault(r => r.Name == s.Name);
+                if (existingReg != null)
+                {
+                    // If it does don't use the same register
+                    s.Register = ((Statement) existingReg).Register;
+                }
+                else
                 {
                     s.Register = AddRegister(data);
+                }
+
+                if (data.Type != DataType.Function)
+                {
                     Lines.Add(s.LoadText());
                 }
 
@@ -230,7 +241,12 @@ namespace Jampiler.Code
             Lines.Add("\t/* end assembledata() */\n\n");
         }
 
-        public void AssembleDataIf(CodeGenerator codeGenerator, Node ifnode, List<Data> data, bool storeRegisters = true, bool moveToFirst = true)
+        public void AssembleDataIf(CodeGenerator codeGenerator,
+            Node ifnode,
+            List<Data> data,
+            bool storeRegisters = true,
+            bool moveToFirst = true,
+            bool isWhile = false)
         {
             // Left is block
             // Left left is comparison
@@ -259,82 +275,93 @@ namespace Jampiler.Code
 
             var first = data.ElementAt(0);
             var firstData = ParseData(first);
-            Lines.Add("\n\t/* start assembledataif() */\n");
-            Lines.Add(firstData);
 
-            var afterLines = new List<string>();
+            var loopName = isWhile ? "while" : "if";
+            Lines.Add(string.Format("\n\t/* start assembledata{0}() */\n", loopName));
 
-            if (data.Count > 1)
+            // For a while loop, label the start so control can return
+            if (isWhile)
             {
-                // Increment start register for if, cannot use left hand side of comparison
-                var ifRegister = startRegister + 1;
-                var currentRegister = ifRegister;
-
-                for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
-                {
-                    var right = data.ElementAt(i + 1);
-                    var op = data.ElementAt(i);
-
-                    // Left element is in register [start register]
-                    // Right element is in register [start register + 1]
-                    Lines.Add(ParseData(right));
-
-                    switch (op.Value)
-                    {
-                        case "+":
-                            Lines.Add(string.Format("\tadd r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
-                            break;
-
-                        case "*":
-                            Lines.Add(string.Format("\tmul r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
-                            break;
-
-                        case "-":
-                            Lines.Add(string.Format("\tsub r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
-                            break;
-                    }
-                }
+                Lines.Add(string.Format("start{0}{1}:\n", loopName, ifLabelNumber));
             }
 
-            // Calculations have been worked out, check compares
-            if (data.Count > 1)
+            // If is before
+            if (!isWhile)
             {
-                var currentRegister = startRegister;
-                for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
+                Lines.Add(firstData);
+
+                if (data.Count > 1)
                 {
-                    var op = data.ElementAt(i);
+                    // Increment start register for if, cannot use left hand side of comparison
+                    var ifRegister = startRegister + 1;
+                    var currentRegister = ifRegister;
 
-                    switch (op.Value)
+                    for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
                     {
-                        case "<":
-                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
-                            Lines.Add(string.Format("\tbge endif{0}\n", ifLabelNumber));
-                            break;
+                        var right = data.ElementAt(i + 1);
+                        var op = data.ElementAt(i);
 
-                        case ">":
-                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
-                            Lines.Add(string.Format("\tble endif{0}\n", ifLabelNumber));
-                            break;
+                        // Left element is in register [start register]
+                        // Right element is in register [start register + 1]
+                        Lines.Add(ParseData(right));
 
-                        case ">=":
-                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
-                            Lines.Add(string.Format("\tblt endif{0}\n", ifLabelNumber));
-                            break;
+                        switch (op.Value)
+                        {
+                            case "+":
+                                Lines.Add(string.Format("\tadd r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                                break;
 
-                        case "<=":
-                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
-                            Lines.Add(string.Format("\tbgt endif{0}\n", ifLabelNumber));
-                            break;
+                            case "*":
+                                Lines.Add(string.Format("\tmul r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                                break;
 
-                        case "==":
-                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
-                            Lines.Add(string.Format("\tbne endif{0}\n", ifLabelNumber));
-                            break;
+                            case "-":
+                                Lines.Add(string.Format("\tsub r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                                break;
+                        }
+                    }
+                }
 
-                        case "!=":
-                            Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
-                            Lines.Add(string.Format("\tbeq endif{0}\n", ifLabelNumber));
-                            break;
+                // Calculations have been worked out, check compares
+                if (data.Count > 1 && !isWhile)
+                {
+                    var currentRegister = startRegister;
+                    for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
+                    {
+                        var op = data.ElementAt(i);
+
+                        switch (op.Value)
+                        {
+                            case "<":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbge end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case ">":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tble end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case ">=":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tblt end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case "<=":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbgt end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case "==":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbne end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case "!=":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbeq end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+                        }
                     }
                 }
             }
@@ -345,9 +372,11 @@ namespace Jampiler.Code
                 Lines.Add(string.Format("\tmov r0, r{0}\n", startRegister));
             }
 
+            // Navigate through the control structure and parse the statements within
             var ifStatement = ifnode.Left.Right;
             do
             {
+                // If there is a return in the control structure we may need to jump to the end of this function
                 if (ifStatement.Type == TokenType.Return)
                 {
                     AddReturn(codeGenerator.ParseReturn(this, ifStatement));
@@ -361,13 +390,98 @@ namespace Jampiler.Code
                 ifStatement = ifStatement.Right;
             } while (ifStatement != null);
 
+            // While is after
+            // Calculations have been worked out, check compares
+            if (isWhile)
+            {
+                Lines.Add(firstData);
+
+                if (data.Count > 1)
+                {
+                    // Increment start register for if, cannot use left hand side of comparison
+                    var ifRegister = startRegister + 1;
+                    var currentRegister = ifRegister;
+
+                    for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
+                    {
+                        var right = data.ElementAt(i + 1);
+                        var op = data.ElementAt(i);
+
+                        // Left element is in register [start register]
+                        // Right element is in register [start register + 1]
+                        Lines.Add(ParseData(right));
+
+                        switch (op.Value)
+                        {
+                            case "+":
+                                Lines.Add(string.Format("\tadd r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                                break;
+
+                            case "*":
+                                Lines.Add(string.Format("\tmul r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                                break;
+
+                            case "-":
+                                Lines.Add(string.Format("\tsub r{0}, r{0}, r{1}\n", ifRegister, ++currentRegister));
+                                break;
+                        }
+                    }
+                }
+
+                if (data.Count > 1)
+                {
+                    var currentRegister = startRegister;
+                    for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
+                    {
+                        var op = data.ElementAt(i);
+
+                        switch (op.Value)
+                        {
+                            case "<":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbge end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case ">":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tble end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case ">=":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tblt end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case "<=":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbgt end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case "==":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbne end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+
+                            case "!=":
+                                Lines.Add(string.Format("\tcmp r{0}, r{1}\n", startRegister, ++currentRegister));
+                                Lines.Add(string.Format("\tbeq end{0}{1}\n", loopName, ifLabelNumber));
+                                break;
+                        }
+                    }
+                }
+
+                // For a while loop, continue from the start of this loop
+                Lines.Add(string.Format("\tb start{0}{1}\n", loopName, ifLabelNumber));
+            }
+
             if (storeRegisters)
             {
                 EndRegisterStore();
             }
 
-            Lines.Add(string.Format("endif{0}:\n", ifLabelNumber));
-            Lines.Add("\t/* end assembledataif() */\n\n");
+            // After loop label
+            Lines.Add(string.Format("\nend{0}{1}:\n", loopName, ifLabelNumber));
+            Lines.Add(string.Format("\t/* end assembledata{0}() */\n", loopName));
         }
 
         private Statement TryParseStatement(Data data)

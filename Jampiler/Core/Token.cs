@@ -26,6 +26,8 @@ namespace Jampiler.Core
         EndIf,
         Else,
         Then,
+        While,
+        EndWhile,
         EndOfFile
     };
 

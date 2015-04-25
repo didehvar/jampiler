@@ -27,6 +27,8 @@ namespace Jampiler.Core
             Regexes.Add(TokenType.EndIf, new Regex(@"end if"));
             Regexes.Add(TokenType.Else, new Regex(@"else"));
             Regexes.Add(TokenType.Then, new Regex(@"then"));
+            Regexes.Add(TokenType.While, new Regex(@"while"));
+            Regexes.Add(TokenType.EndWhile, new Regex(@"end while"));
             Regexes.Add(TokenType.Nil, new Regex(@"nil|NIL"));
             Regexes.Add(TokenType.False, new Regex(@"false|FALSE"));
             Regexes.Add(TokenType.True, new Regex(@"true|TRUE"));

@@ -123,8 +123,6 @@ namespace Jampiler.Core
                 statement.Name = node.Value;
                 statement.Value = node.Left.Right.Value;
 
-
-
                 switch (node.Left.Right.Type)
                 {
                     case TokenType.Number:
@@ -174,6 +172,12 @@ namespace Jampiler.Core
                 // Left left is comparison
                 parent.AssembleDataIf(this, node, ParseExpression(parent, node.Left.Left), true, false);
             }
+            // 'while', expression, 'then', block, 'end while'
+            else if (node.Type == TokenType.While)
+            {
+                // Same node structure as if
+                parent.AssembleDataIf(this, node, ParseExpression(parent, node.Left.Left), true, false, true);
+            }
             // identifier, arg list;
             else
             {
@@ -194,12 +198,39 @@ namespace Jampiler.Core
                             _externals.Add("printf");
                         }
 
+                        parent.Lines.Add("\t/* print */\n");
+
+                        // Push all registers that printf will use
+                        var nextNode = node.Left.Right;
+                        var count = 1; // Registers used for printf
+                        while (nextNode != null)
+                        {
+                            count++;
+                            nextNode = nextNode.Right;
+                        }
+
+                        var push = "\tpush {r0";
+                        var pop = "\n\tpop {r0";
+
+                        for (var i = 1; i < count; i++)
+                        {
+                            var format = string.Format(", r{0}", i);
+
+                            push += format;
+                            pop += format;
+                        }
+
+                        push += "}\n\n";
+                        pop += "}\n";
+                        
+                        parent.Lines.Add(push);
+
                         // Store initial printf string
                         var name = "printf" + Data.Count;
                         Data.Add(new Data(DataType.Asciz) { Name = name, Value = node.Left.Value });
 
-                        var nextNode = node.Left.Right;
-                        var count = 1; // Registers used for printf
+                        nextNode = node.Left.Right;
+                        count = 1; // Registers used for printf
                         while (nextNode != null)
                         {
                             Console.WriteLine("TYPE {0}", nextNode);
@@ -209,7 +240,6 @@ namespace Jampiler.Core
                                 case TokenType.Identifier:
                                     // Local variables will already be loaded
                                     // Global variables are not loaded
-
                                     LoadIdentifier(nextNode, parent, count++);
 
                                     break;
@@ -234,7 +264,10 @@ namespace Jampiler.Core
 
                         // Load string into register
                         parent.Lines.Add(string.Format("\tldr r0, addr_{0}\n\n", name));
-                        parent.Lines.Add("\tbl printf\n\n");
+                        parent.Lines.Add("\tbl printf\n");
+
+                        parent.Lines.Add(pop);
+                        parent.Lines.Add("\t/* end print */\n\n");
 
                         break;
 
@@ -351,6 +384,18 @@ namespace Jampiler.Core
         {
             Console.WriteLine("LoadIdentifier() {0}", identifierNode.ToString());
             var locData = GetDataWithName(parent, identifierNode.Value);
+
+            // If this is an identifier we just load it into the right register
+            if (locData is Statement && locData.Type != DataType.Function)
+            {
+                var s = (Statement) locData;
+                if (register != s.Register) // Don't load it in if it is already in the right register
+                {
+                    parent.Lines.Add(string.Format("\tmov r{0}, r{1}\n", register, s.Register));
+                }
+
+                return;
+            }
 
             switch (locData.Type)
             {

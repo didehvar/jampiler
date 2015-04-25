@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Jampiler.Code
 {
@@ -27,6 +28,7 @@ namespace Jampiler.Code
 
             if (Datas != null)
             {
+                Console.WriteLine("ASSEMBLING DATA INTO {0}", Register);
                 Parent.AssembleData(Datas, true, false, Register);
                 return "";
             }

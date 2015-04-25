@@ -1,0 +1,10 @@
+function main()
+  local result = 0
+  
+  while result < 3 then
+    local result = result + 1
+	print("loop %d\n", result)
+  end while
+  
+  return 0
+end
