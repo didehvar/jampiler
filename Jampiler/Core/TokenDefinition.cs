@@ -2,6 +2,9 @@
 
 namespace Jampiler.Core
 {
+    /// <summary>
+    /// Definition for a token. Matches the regex for a token to a specific token type.
+    /// </summary>
     public class TokenDefinition
     {
         public TokenDefinition(TokenType type, Regex regex, bool ignore = false)

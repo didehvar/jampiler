@@ -2,6 +2,10 @@
 
 namespace Jampiler.Core
 {
+    /// <summary>
+    /// Stores the position of a token in the source code.
+    /// Used to provide more helpful error messages relating to the source code.
+    /// </summary>
     public class TokenPosition
     {
         public TokenPosition(int currentIndex, int currentLine, int currentColumn)

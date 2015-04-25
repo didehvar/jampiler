@@ -5,6 +5,9 @@ using Jampiler.AST;
 
 namespace Jampiler.Core
 {
+    /// <summary>
+    /// Converts tokens provided by the lexer into an abstract syntax tree (AST).
+    /// </summary>
     public class Parser
     {
         private Token _currentToken;
@@ -19,7 +22,8 @@ namespace Jampiler.Core
             _currentIndex = -1;
 
             NextToken();
-
+            
+            // Parse functions and statements into the AST
             var tree = new List<Node>();
             while (_currentToken.Type == TokenType.Function || _currentToken.Type == TokenType.Identifier)
             {
@@ -29,6 +33,9 @@ namespace Jampiler.Core
             return tree;
         }
 
+        /// <summary>
+        /// Move to the next token in the token list.
+        /// </summary>
         private void NextToken()
         {
             if (_currentIndex >= _tokens.Count())
@@ -51,6 +58,9 @@ namespace Jampiler.Core
             } while (_currentToken.Type == TokenType.Whitespace || _currentToken.Type == TokenType.Comment);
         }
 
+        /// <summary>
+        /// Check if the current token is of a certain type. If it is consume the next token.
+        /// </summary>
         private bool Accept(TokenType type)
         {
             if (_currentToken.Type != type)
@@ -78,6 +88,9 @@ namespace Jampiler.Core
             return true;
         }
 
+        /// <summary>
+        /// Expect a token type. Fail if the type is invalid as the source code is incorrect.
+        /// </summary>
         private void Expect(TokenType type)
         {
             if (!Accept(type))
@@ -115,9 +128,9 @@ namespace Jampiler.Core
 
         private Node Statement(bool global = false)
         {
-            // statement =  [ ‘local’ ], identifier, [ ( ‘=‘, expression ) | arg list ];
-            //      | identifier, arg list
-            //      | 'if', expression, block, [ 'else', block ], 'end if';
+            // statement = [ ‘local’ ], identifier, [ ( ‘=‘, expression ) | arg list ]
+            //           | 'if', expression, 'then', block, [ 'else', block],  'end if'
+            //           | 'while', expression, 'then', block, 'end while';
 
             var left = _currentToken;
             if (Accept(TokenType.Local) && !global)

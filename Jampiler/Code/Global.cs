@@ -2,6 +2,9 @@
 
 namespace Jampiler.Code
 {
+    /// <summary>
+    /// Used for management of global variables.
+    /// </summary>
     public class Global : Data
     {
         public List<Data> Datas { get; set; }

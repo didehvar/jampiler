@@ -2,6 +2,9 @@
 
 namespace Jampiler.Code
 {
+    /// <summary>
+    /// Singleton for the management of all global variables.
+    /// </summary>
     public class Globals
     {
         private static Globals _instance;

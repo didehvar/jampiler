@@ -3,6 +3,10 @@ using System.Text.RegularExpressions;
 
 namespace Jampiler.Core
 {
+    /// <summary>
+    /// Singleton containing all regex for the source code.
+    /// Represents the source Extended Backus-Naur Form (EBNF).
+    /// </summary>
     public class TokenRegex
     {
         private static TokenRegex _instance;
@@ -37,7 +41,7 @@ namespace Jampiler.Core
             Regexes.Add(TokenType.End, new Regex(@"end"));
             Regexes.Add(TokenType.Function, new Regex(@"function"));
 
-            Regexes.Add(TokenType.Identifier, new Regex(@"[a-zA-Z_]\w*")); // Must come after keywords
+            Regexes.Add(TokenType.Identifier, new Regex(@"[a-zA-Z_]\w*")); // Must come after keywords (don't want to overwrite keywords with identifiers!)
         }
 
         public static TokenRegex Instance => _instance ?? (_instance = new TokenRegex());

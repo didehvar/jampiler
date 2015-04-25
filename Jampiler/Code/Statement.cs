@@ -1,8 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Jampiler.Code
 {
+    /// <summary>
+    /// Representation of a statement.
+    /// </summary>
     public class Statement : Data
     {
         public Function Parent { get; set; }
@@ -19,20 +21,26 @@ namespace Jampiler.Code
             Type = null;
         }
 
+        /// <summary>
+        /// Load the statement into a register that was previously assigned by the parent.
+        /// </summary>
+        /// <returns>Assembly code for initialisation of this statement</returns>
         public string LoadText()
         {
+            // Can't convert a statement with no assigned register or value into assembly
             if (Register == null || Value == null)
             {
                 return null;
             }
 
+            // If this statement contains a data list then the list must be assembled by the parent
             if (Datas != null)
             {
-                Console.WriteLine("ASSEMBLING DATA INTO {0}", Register);
                 Parent.AssembleData(Datas, true, false, Register);
                 return "";
             }
 
+            // ldr must be used for strings
             if (Type == DataType.Asciz)
             {
                 return string.Format("\tldr r{0}, addr_{1}\n", Register, Name);

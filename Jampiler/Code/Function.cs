@@ -6,6 +6,9 @@ using Jampiler.Core;
 
 namespace Jampiler.Code
 {
+    /// <summary>
+    /// Used by the code generator to generate assembly for this functions .text section.
+    /// </summary>
     public class Function
     {
         public Node StartNode { get; set; }
@@ -49,31 +52,28 @@ namespace Jampiler.Code
                 return;
             }
 
-            if (data is Statement)
+            var s = data as Statement;
+            if (s == null)
             {
-                var s = (Statement) data;
-
-                // Check that this data doesn't already have a register
-                var existingReg = Registers.FirstOrDefault(r => r.Name == s.Name);
-                if (existingReg != null)
-                {
-                    // If it does don't use the same register
-                    s.Register = ((Statement) existingReg).Register;
-                }
-                else
-                {
-                    s.Register = AddRegister(data);
-                }
-
-                if (data.Type != DataType.Function)
-                {
-                    Lines.Add(s.LoadText());
-                }
-
-                Statements.Add(s);
+                return;
             }
+
+            // Check that this data doesn't already have a register
+            var existingReg = Registers.FirstOrDefault(r => r.Name == s.Name);
+            s.Register = existingReg != null ? ((Statement) existingReg).Register : AddRegister(s);
+
+            if (s.Type != DataType.Function)
+            {
+                Lines.Add(s.LoadText());
+            }
+
+            Statements.Add(s);
         }
 
+        /// <summary>
+        /// Converts this function into assembly.
+        /// </summary>
+        /// <returns>Assembly representation for this function</returns>
         public string Text()
         {
             var s = "";
@@ -113,44 +113,50 @@ namespace Jampiler.Code
             return s;
         }
 
-        public void StoreLR(Data data, int register)
+        public void StoreLr(Data data, int register)
         {
             // Store lr before puts replaces it
             Lines.Add(string.Format("\n\tldr r{0}, addr_{1}\n", register, data.Name));
             Lines.Add(string.Format("\tstr lr, [r{0}]\n\n", register));
         }
 
-        public void LoadLR(Data data, int register)
+        public void LoadLr(Data data, int register)
         {
             // Restore lr
             Lines.Add(string.Format("\n\tldr lr, addr_{1}\n", register, data.Name));
             Lines.Add(string.Format("\tldr lr, [lr]\n", register));
         }
 
+        /// <summary>
+        /// Ensures that data names never conflict by generating a unique name.
+        /// </summary>
+        /// <returns>Name for a piece of data used by this function</returns>
         public string DataName()
         {
             return string.Format("{0}{1}", Name, _count++.ToString());
         }
 
+        /// <summary>
+        /// Start recording how many registers have been stored in preperation to remove them, see EndRegisterStore().
+        /// </summary>
         public void StartRegisterStore()
         {
             _regDeleteStart = Registers.Count;
         }
 
+        /// <summary>
+        /// Terminate the register store - delete any registers used.
+        /// </summary>
         public void EndRegisterStore()
         {
             UpdateRegCount();
             Registers.RemoveRange(_regDeleteStart, Registers.Count - _regDeleteStart);
         }
 
-        public int RegisterCount()
-        {
-            return Registers.Count;
-        }
-
         public int AddRegister(Data register)
         {
-            Console.WriteLine("ADDREGISTER: {0} [[{1}]]", Registers.Count, register.ToString());
+            Logger.Instance.Debug("ADD REGISTER: {0} [[{1}]]", Registers.Count, register.ToString());
+
             Registers.Add(register);
             return Registers.Count - 1;
         }
@@ -161,6 +167,9 @@ namespace Jampiler.Code
             Registers.RemoveAt(index);
         }
 
+        /// <summary>
+        /// Update the register count - used to pop and push used registers.
+        /// </summary>
         private void UpdateRegCount()
         {
             var regCount = Registers.Count;
@@ -170,6 +179,13 @@ namespace Jampiler.Code
             }
         }
 
+        /// <summary>
+        /// Creates assembly code for a list of data objects.
+        /// </summary>
+        /// <param name="data">List of data objects</param>
+        /// <param name="storeRegisters">Whether to store the data in registers</param>
+        /// <param name="moveToFirst">If the result should be moved into r0</param>
+        /// <param name="moveToSpecific">A specific register to move the result into</param>
         public void AssembleData(List<Data> data, bool storeRegisters = true, bool moveToFirst = true, int? moveToSpecific = null)
         {
             if (data == null)
@@ -182,15 +198,15 @@ namespace Jampiler.Code
                 StartRegisterStore();
             }
 
-            var startRegister = RegisterCount();
+            var startRegister = Registers.Count;
 
-            Console.WriteLine();
-            Console.WriteLine("DATA FOR ASSEMBLEDATA");
+            Logger.Instance.Debug();
+            Logger.Instance.Debug("DATA FOR ASSEMBLEDATA");
             foreach (var d in data)
             {
-                Console.WriteLine(d?.ToString());
+                Logger.Instance.Debug(d?.ToString());
             }
-            Console.WriteLine();
+            Logger.Instance.Debug();
 
             var first = data.ElementAt(0);
             var firstData = ParseData(first);
@@ -241,6 +257,15 @@ namespace Jampiler.Code
             Lines.Add("\t/* end assembledata() */\n\n");
         }
 
+        /// <summary>
+        /// Generates assembly code for an if or while structure.
+        /// </summary>
+        /// <param name="codeGenerator">Instance used to parse statements in this structure</param>
+        /// <param name="ifnode">Node at which the structure starts</param>
+        /// <param name="data">List of data objects</param>
+        /// <param name="storeRegisters">Whether to store the data in registers</param>
+        /// <param name="moveToFirst">If the result should be moved into r0</param>
+        /// <param name="isWhile">Whether this is a while structure</param>
         public void AssembleDataIf(CodeGenerator codeGenerator,
             Node ifnode,
             List<Data> data,
@@ -261,15 +286,15 @@ namespace Jampiler.Code
                 StartRegisterStore();
             }
 
-            var startRegister = RegisterCount();
+            var startRegister = Registers.Count;
 
-            Console.WriteLine();
-            Console.WriteLine("DATA FOR ASSEMBLEDATAIF");
+            Logger.Instance.Debug();
+            Logger.Instance.Debug("DATA FOR ASSEMBLEDATAIF");
             foreach (var d in data)
             {
-                Console.WriteLine(d?.ToString());
+                Logger.Instance.Debug(d?.ToString());
             }
-            Console.WriteLine();
+            Logger.Instance.Debug();
 
             var ifLabelNumber = Lines.Count;
 
@@ -323,7 +348,7 @@ namespace Jampiler.Code
                 }
 
                 // Calculations have been worked out, check compares
-                if (data.Count > 1 && !isWhile)
+                if (data.Count > 1)
                 {
                     var currentRegister = startRegister;
                     for (var i = 1; i < data.Count - 1; i = i + 2) // Exclude first and last element
@@ -428,6 +453,7 @@ namespace Jampiler.Code
                     }
                 }
 
+                // Generate compare and branch instructions to exit/continue the while loop
                 if (data.Count > 1)
                 {
                     var currentRegister = startRegister;
@@ -484,6 +510,9 @@ namespace Jampiler.Code
             Lines.Add(string.Format("\t/* end assembledata{0}() */\n", loopName));
         }
 
+        /// <summary>
+        /// Attempt to parse a data object as a statement
+        /// </summary>
         private Statement TryParseStatement(Data data)
         {
             if (!(data is Statement))
@@ -500,6 +529,12 @@ namespace Jampiler.Code
             return statement;
         }
 
+        /// <summary>
+        /// Parse data into assembly instructions.
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="isReturn">Whether the output should be moved into r0</param>
+        /// <returns>Assembly code</returns>
         public string ParseData(Data data, bool isReturn = false)
         {
             if (data == null)
@@ -516,7 +551,7 @@ namespace Jampiler.Code
             {
                 secondReg = statement;
 
-                Console.WriteLine("IS STATEMENT: {0}", statement);
+                Logger.Instance.Debug("IS STATEMENT: {0}", statement);
                 if (statement.Register != null)
                 {
                     // Statement already exists in register, simply load it into the required register

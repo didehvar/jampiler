@@ -2,6 +2,9 @@
 
 namespace Jampiler.Code
 {
+    /// <summary>
+    /// Represents the type of data that the data class is carrying.
+    /// </summary>
     public enum DataType
     {
         Number,
@@ -15,6 +18,10 @@ namespace Jampiler.Code
         Function
     }
 
+    /// <summary>
+    /// A data element: the result of a token being converted in code generation.
+    /// Used to construct assembly in the .data section.
+    /// </summary>
     public class Data
     {
         public DataType? Type;

@@ -2,6 +2,9 @@
 
 namespace Jampiler.Core
 {
+    /// <summary>
+    /// Type of token, used by the lexer and parser to determine correct source code.
+    /// </summary>
     public enum TokenType
     {
         Operator,
@@ -31,6 +34,9 @@ namespace Jampiler.Core
         EndOfFile
     };
 
+    /// <summary>
+    /// A token is the representation of a non-terminal symbol.
+    /// </summary>
     public class Token
     {
         public Token(TokenType type, string value, TokenPosition tokenPosition)

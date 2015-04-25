@@ -1,18 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using Jampiler.AST;
 using Jampiler.Code;
 
 namespace Jampiler.Core
 {
+    /// <summary>
+    /// Generates assembly code based on the abstract syntax tree provided by the parser.
+    /// </summary>
     public class CodeGenerator
     {
+        /// <summary>
+        /// Variables used in the program.
+        /// </summary>
         public List<Data> Data { get; set; }
 
+        /// <summary>
+        /// Functions used in the program.
+        /// </summary>
         public List<Function> Functions { get; set; }
 
+        /// <summary>
+        /// External C runtime functions.
+        /// </summary>
         private readonly List<string> _externals = new List<string>(); 
 
         public CodeGenerator()
@@ -21,12 +32,17 @@ namespace Jampiler.Core
             Functions = new List<Function>();
         }
 
+        /// <summary>
+        /// Generate assembly code.
+        /// </summary>
+        /// <param name="nodes">Abstract syntax tree entry points</param>
         public void Generate(List<Node> nodes)
         {
             // First node is top of tree, work out what token each node is
+            // Parse statements and functions differently
             foreach (var n in nodes.Where(n => n.Type == TokenType.Identifier))
             {
-                Console.WriteLine("PARSING NON-FUNCTION {0}", n.ToString());
+                Logger.Instance.Debug("PARSING NON-FUNCTION {0}", n.ToString());
                 ParseStatement(null, n);
             }
 
@@ -49,6 +65,7 @@ namespace Jampiler.Core
                 return func;
             }
 
+            // Create a data label for this functions lr store
             var data = new Data(DataType.Return)
             {
                 Name = "return" + Data.Count,
@@ -58,8 +75,10 @@ namespace Jampiler.Core
             Data.Add(data);
 
             var lrRegister = func.AddRegister(data);
-            func.StoreLR(data, lrRegister);
+            func.StoreLr(data, lrRegister);
 
+            // Iterate through statements in this functions block
+            // Parse return separately
             var statement = funcNode.Right.Right;
             do
             {
@@ -75,11 +94,15 @@ namespace Jampiler.Core
                 statement = statement.Right;
             } while (statement != null);
 
-            func.LoadLR(data, lrRegister);
+            func.LoadLr(data, lrRegister);
 
             return func;
         }
 
+        /// <summary>
+        /// Constructs the assembly output for the generation process based on data stored by the output.
+        /// </summary>
+        /// <returns>Assembly code representation</returns>
         public string Output()
         {
             var data = Data.Aggregate(".data\n\n", (current, d) => current + d.Text());
@@ -91,6 +114,9 @@ namespace Jampiler.Core
             return string.Format("{0}\n{1}\n{2}\n\n{3}", data, text, addr, externals);
         }
 
+        /// <summary>
+        /// Fail if the node doesn't have the correct token type.
+        /// </summary>
         private static void Expect(Node node, TokenType type)
         {
             if (node == null || node.Type != type)
@@ -99,20 +125,11 @@ namespace Jampiler.Core
             }
         }
 
-        private static void Expect(Node node, List<TokenType> types)
-        {
-            if (node == null || types.All(t => node.Type != t))
-            {
-                throw new Exception("Unexpected node type");
-            }
-        }
-
-
         public Data ParseStatement(Function parent, Node node)
         {
-            // statement =  [ ‘local’ ], identifier, [ ( ‘=‘, expression ) | arg list ];
-            //      | identifier, arg list
-            //      | 'if', expression, block, [ 'else', block ], 'end if';
+            // statement = [ ‘local’ ], identifier, [ ( ‘=‘, expression ) | arg list ]
+            //           | 'if', expression, 'then', block, [ 'else', block],  'end if'
+            //           | 'while', expression, 'then', block, 'end while';
 
             var statement = new Statement(parent);
 
@@ -123,6 +140,7 @@ namespace Jampiler.Core
                 statement.Name = node.Value;
                 statement.Value = node.Left.Right.Value;
 
+                // Parse differently based on expression type.
                 switch (node.Left.Right.Type)
                 {
                     case TokenType.Number:
@@ -233,7 +251,7 @@ namespace Jampiler.Core
                         count = 1; // Registers used for printf
                         while (nextNode != null)
                         {
-                            Console.WriteLine("TYPE {0}", nextNode);
+                            Logger.Instance.Debug("TYPE {0}", nextNode);
 
                             switch (nextNode.Type)
                             {
@@ -344,7 +362,7 @@ namespace Jampiler.Core
                     return GetDataWithName(parent, node.Value);
 
                 case TokenType.Nil:
-                    Console.WriteLine("RETURNNIL");
+                    Logger.Instance.Debug("RETURNNIL");
                     return new Data(DataType.Number) { Value = "0" };
 
                 default:
@@ -352,6 +370,9 @@ namespace Jampiler.Core
             }
         }
 
+        /// <summary>
+        /// Add data but fail if the data is invalid.
+        /// </summary>
         private Data AddData(Data data)
         {
             if (data.Type == null || data.Value == null)
@@ -363,6 +384,12 @@ namespace Jampiler.Core
             return data;
         }
 
+        /// <summary>
+        /// Retrieve a variable/function based on its identifier.
+        /// </summary>
+        /// <param name="parent">Parent to scan before scanning globals</param>
+        /// <param name="name">Name of identifier</param>
+        /// <returns>Data containing identifier with this name</returns>
         private Data GetDataWithName(Function parent, string name)
         {
             var statement = parent.Statements.FirstOrDefault(s => s.Name == name);
@@ -380,15 +407,22 @@ namespace Jampiler.Core
             throw new Exception("Identifier not found");
         }
 
+        /// <summary>
+        /// Generate assembly code to load an identifier into a register.
+        /// </summary>
+        /// <param name="identifierNode">Node to generate for</param>
+        /// <param name="parent">Parent containing assembly code</param>
+        /// <param name="register">Register to load into</param>
         private void LoadIdentifier(Node identifierNode, Function parent, int register)
         {
-            Console.WriteLine("LoadIdentifier() {0}", identifierNode.ToString());
+            Logger.Instance.Debug("LoadIdentifier() {0}", identifierNode.ToString());
             var locData = GetDataWithName(parent, identifierNode.Value);
 
             // If this is an identifier we just load it into the right register
-            if (locData is Statement && locData.Type != DataType.Function)
+            var data = locData as Statement;
+            if (data != null && data.Type != DataType.Function)
             {
-                var s = (Statement) locData;
+                var s = data;
                 if (register != s.Register) // Don't load it in if it is already in the right register
                 {
                     parent.Lines.Add(string.Format("\tmov r{0}, r{1}\n", register, s.Register));
@@ -397,9 +431,10 @@ namespace Jampiler.Core
                 return;
             }
 
+            // Otherwise, take a different action dpeending on data type
             switch (locData.Type)
             {
-                case DataType.Global:
+                case DataType.Global: // if global, find the global and assemble from this parent
                     var global = (Global)locData;
                     parent.AssembleData(global.Datas, false, false);
                     break;
