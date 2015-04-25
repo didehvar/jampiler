@@ -14,7 +14,7 @@ namespace Jampiler.Core
             Regexes.Add(TokenType.Whitespace, new Regex(@"\s+"));
             Regexes.Add(TokenType.String, new Regex(@"""[^""]+"""));
             Regexes.Add(TokenType.Number, new Regex(@"[0-9]+"));
-            Regexes.Add(TokenType.Operator, new Regex(@"\+|-|\*|\/|<|>|>=|<=|==|!=|and|or|AND|OR"));
+            Regexes.Add(TokenType.Operator, new Regex(@"\+|-|\*|\/|>=|<=|==|!=|<|>"));
 
             // Characters
             Regexes.Add(TokenType.Equals, new Regex(@"="));

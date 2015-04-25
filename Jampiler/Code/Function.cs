@@ -152,14 +152,14 @@ namespace Jampiler.Code
 
         private void UpdateRegCount()
         {
-            var regCount = Registers.Count - 1;
+            var regCount = Registers.Count;
             if (regCount >= 4 && _regMax < regCount)
             {
                 _regMax = regCount;
             }
         }
 
-        public void AssembleData(List<Data> data, bool storeRegisters = true, bool moveToFirst = true)
+        public void AssembleData(List<Data> data, bool storeRegisters = true, bool moveToFirst = true, int? moveToSpecific = null)
         {
             if (data == null)
             {
@@ -183,7 +183,7 @@ namespace Jampiler.Code
 
             var first = data.ElementAt(0);
             var firstData = ParseData(first);
-            Lines.Add("\t/* start assembledata() */\n");
+            Lines.Add("\n\t/* start assembledata() */\n");
             Lines.Add(firstData);
 
             if (data.Count > 1)
@@ -211,6 +211,11 @@ namespace Jampiler.Code
                 }
             }
 
+            if (moveToSpecific != null)
+            {
+                Lines.Add(string.Format("\tmov r{0}, r{1}\n", moveToSpecific, startRegister));
+            }
+
             // If register 0 isn't used as the final data store for the operation, the data must be moved into r0
             if (startRegister != 0 && storeRegisters && firstData != null && moveToFirst)
             {
@@ -222,7 +227,7 @@ namespace Jampiler.Code
                 EndRegisterStore();
             }
 
-            Lines.Add("\t/* end assembledata() */\n");
+            Lines.Add("\t/* end assembledata() */\n\n");
         }
 
         public void AssembleDataIf(CodeGenerator codeGenerator, Node ifnode, List<Data> data, bool storeRegisters = true, bool moveToFirst = true)
@@ -254,7 +259,7 @@ namespace Jampiler.Code
 
             var first = data.ElementAt(0);
             var firstData = ParseData(first);
-            Lines.Add("\t/* start assembledataif() */\n");
+            Lines.Add("\n\t/* start assembledataif() */\n");
             Lines.Add(firstData);
 
             var afterLines = new List<string>();

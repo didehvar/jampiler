@@ -62,6 +62,22 @@ namespace Jampiler.Core
             return true;
         }
 
+        private bool Accept(List<TokenType> types)
+        {
+            if (types == null)
+            {
+                throw new ArgumentNullException(nameof(types));
+            }
+
+            if (!types.Contains(_currentToken.Type))
+            {
+                return false;
+            }
+
+            NextToken();
+            return true;
+        }
+
         private void Expect(TokenType type)
         {
             if (!Accept(type))
@@ -72,19 +88,10 @@ namespace Jampiler.Core
 
         private void Expect(List<TokenType> types)
         {
-            if (types == null)
+            if (!Accept(types))
             {
-                throw new ArgumentNullException(nameof(types));
-            }
-
-            types.ForEach(t => Console.WriteLine(t));
-            Console.WriteLine(_currentToken.Type);
-
-            if (!types.Contains(_currentToken.Type)) {
                 throw new Exception("Unexpected token");
             }
-
-            NextToken();
         }
 
         private Node Expression()
@@ -108,33 +115,33 @@ namespace Jampiler.Core
 
         private Node Statement(bool global = false)
         {
-            // statement = ‘local’, identifier, [ ‘=‘, ( string | number | identifier [ arg list ] ) ]
-            //      | identifier, ‘=‘, expression
+            // statement =  [ ‘local’ ], identifier, [ ( ‘=‘, expression ) | arg list ];
             //      | identifier, arg list
             //      | 'if', expression, block, [ 'else', block ], 'end if';
 
             var left = _currentToken;
             if (Accept(TokenType.Local) && !global)
             {
-                // identifier, [ '=', (string | number | identifier)]
+                // [ ‘local’ ], identifier, ‘=‘, expression
                 var identifier = _currentToken;
                 Expect(TokenType.Identifier);
 
                 var equals = _currentToken;
-                if (!Accept(TokenType.Equals)) // 'local’, identifier
+
+                // '=', expression
+                if (Accept(TokenType.Equals))
                 {
-                    return new Node(identifier, new Node(left), null);
+                    return new Node(identifier, new Node(equals, new Node(left), Expression()), null);
                 }
 
-                // (string | number | identifier)
-                Expect(new List<TokenType>
+                // arg list
+                if (_currentToken.Type == TokenType.OpenBracket)
                 {
-                    TokenType.String,
-                    TokenType.Number,
-                    TokenType.Identifier
-                });
+                    return new Node(identifier, new Node(equals, new Node(left), ArgumentList()), null);
+                }
 
-                return new Node(identifier, new Node(equals, new Node(left), new Node(_lastToken)), null);
+                // [ ‘local’ ], identifier
+                return new Node(identifier, new Node(left), null);
             }
 
             if (Accept(TokenType.Identifier))
@@ -152,7 +159,13 @@ namespace Jampiler.Core
                 }
 
                 // arg list
-                return new Node(left, ArgumentList(), null);
+                if (_currentToken.Type == TokenType.OpenBracket)
+                {
+                    return new Node(left, ArgumentList(), null);
+                }
+
+                // identifier
+                return new Node(left);
             }
 
             if (Accept(TokenType.If))

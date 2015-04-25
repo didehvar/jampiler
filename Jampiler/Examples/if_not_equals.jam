@@ -1,0 +1,9 @@
+function main()
+  local result = 5
+  
+  if result != 5 then
+    return 1
+  end if
+  
+  return 0
+end

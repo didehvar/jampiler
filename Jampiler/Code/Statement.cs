@@ -1,10 +1,14 @@
-﻿namespace Jampiler.Code
+﻿using System.Collections.Generic;
+
+namespace Jampiler.Code
 {
     public class Statement : Data
     {
         public Function Parent { get; set; }
 
         public int? Register { get; set; }
+
+        public List<Data> Datas { get; set; }
 
         public Statement(Function parent) : base(DataType.Statement)
         {
@@ -19,6 +23,12 @@
             if (Register == null || Value == null)
             {
                 return null;
+            }
+
+            if (Datas != null)
+            {
+                Parent.AssembleData(Datas, true, false, Register);
+                return "";
             }
 
             if (Type == DataType.Asciz)

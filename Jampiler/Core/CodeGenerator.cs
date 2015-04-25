@@ -110,17 +110,20 @@ namespace Jampiler.Core
 
         public Data ParseStatement(Function parent, Node node)
         {
-            // statement = 'local’, identifier, [ '=', ( string | number | identifier [ arg list ] ) ]
-            //           | identifier, '=', expression
-            //           | identifier, arg list;
+            // statement =  [ ‘local’ ], identifier, [ ( ‘=‘, expression ) | arg list ];
+            //      | identifier, arg list
+            //      | 'if', expression, block, [ 'else', block ], 'end if';
 
             var statement = new Statement(parent);
 
-            // 'local’, identifier, [ '=', (string | number | identifier)]
-            if (parent != null && node.Left != null && node.Left.Type == TokenType.Equals && node.Left.Left != null)
+            // [ ‘local’ ], identifier, ‘=‘, expression;
+            if (parent != null && node.Left != null && node.Left.Type == TokenType.Equals &&
+                ((node.Left.Left != null && node.Left.Left.Type == TokenType.Local) || node.Left.Type == TokenType.Local))
             {
                 statement.Name = node.Value;
                 statement.Value = node.Left.Right.Value;
+
+
 
                 switch (node.Left.Right.Type)
                 {
@@ -135,6 +138,11 @@ namespace Jampiler.Core
 
                     case TokenType.Identifier:
                         statement.Type = DataType.Function;
+                        break;
+
+                    case TokenType.Operator: // Expression
+                        statement.Type = DataType.Operator;
+                        statement.Datas = ParseExpression(parent, node.Left.Right);
                         break;
 
                     default:
@@ -384,6 +392,23 @@ namespace Jampiler.Core
                     if (backupReg != null)
                     {
                         parent.Lines.Add(string.Format("\tmov r0, r{0}\n", backupReg));
+                    }
+
+                    break;
+
+                case DataType.Operator:
+                    // Data is in a register in parent, find it and load it
+                    var regData = parent.Registers.FirstOrDefault(r => r.Name == locData.Name);
+                    if (regData == null)
+                    {
+                        throw new Exception("Missing variable");
+                    }
+
+                    // Useless moving data into a register its already in
+                    var existingRegister = ((Statement) regData).Register;
+                    if (existingRegister != register)
+                    {
+                        parent.Lines.Add(string.Format("\tmov r{0}, r{1}\n", register, existingRegister));
                     }
 
                     break;

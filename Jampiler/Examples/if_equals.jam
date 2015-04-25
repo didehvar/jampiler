@@ -1,8 +1,8 @@
 // will exit with 1 if 15 == 15 or 0 otherwise
 function main()
-  local result = 16
+  local result = 15
   
-  // compare result variable with the calculation of 3 *5
+  // compare result variable with the calculation of 3 * 5
   if result == 3 * 5 then
     return 1
   end if

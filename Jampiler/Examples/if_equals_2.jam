@@ -1,0 +1,11 @@
+// will print if 20 == 20
+function main()
+  local result = 20
+  local calc = 4 * 5
+  
+  if result == calc then
+    print("%d is equal to %d\n", result, calc)
+  end if
+  
+  return 0
+end
