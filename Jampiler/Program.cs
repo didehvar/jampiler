@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
+using Jampiler.AST;
 using Jampiler.Core;
 
 namespace Jampiler
@@ -39,8 +42,17 @@ namespace Jampiler
 
             Logger.Instance.Debug(program);
 
-            var lexTokens = lexer.Tokenize(program);
-            var tokens = lexTokens as Token[] ?? lexTokens.ToArray();
+            Token[] tokens = null;
+            try
+            {
+                var lexTokens = lexer.Tokenize(program);
+                tokens = lexTokens as Token[] ?? lexTokens.ToArray();
+            }
+            catch (Exception exception)
+            {
+                Logger.Instance.Error(exception.Message);
+                return;
+            }
 
             Logger.Instance.Debug("\n----- TOKENS -----");
             foreach (var token in tokens)
@@ -49,8 +61,17 @@ namespace Jampiler
             }
             Logger.Instance.Debug("--- END TOKENS ---");
 
-            var parser = new Parser();
-            var nodes = parser.Parse(tokens);
+            List<Node> nodes = null;
+            try
+            {
+                var parser = new Parser();
+                nodes = parser.Parse(tokens);
+            }
+            catch (Exception exception)
+            {
+                Logger.Instance.Error(exception.Message);
+                return;
+            }
 
             Logger.Instance.Debug("\n----- NODES -----");
             nodes.ForEach(n => n.Print());
@@ -58,9 +79,19 @@ namespace Jampiler
 
             Logger.Instance.Debug("\n----- OUTPUT -----");
 
-            var codeGenerator = new CodeGenerator();
-            codeGenerator.Generate(nodes);
-            var codeGenOutput = codeGenerator.Output();
+            var codeGenOutput = "";
+            try
+            {
+                var codeGenerator = new CodeGenerator();
+                codeGenerator.Generate(nodes);
+                codeGenOutput = codeGenerator.Output();
+            }
+            catch (Exception exception)
+            {
+                Logger.Instance.Error(exception.Message);
+                return;
+            }
+
             Logger.Instance.Debug(codeGenOutput);
 
             // Write assembly to file
